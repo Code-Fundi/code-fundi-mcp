@@ -1,6 +1,6 @@
 # Code-Fundi MCP Server
 
-A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the [Code-Fundi](https://codefundi.app) API. Enables any MCP-compatible AI assistant — Claude, Cursor, Windsurf, VS Code Copilot, and more — to search, research, index, and manage code repositories through natural language.
+A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the [Code-Fundi](https://api.codefundi.app) API. Enables any MCP-compatible AI assistant — Claude, Cursor, Windsurf, VS Code Copilot, and more — to search, research, index, and manage code repositories through natural language.
 
 Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod](https://zod.dev) for schema validation.
 
@@ -159,7 +159,7 @@ This enables fully autonomous agent setup without manual configuration.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CODEFUNDI_API_KEY` | No* | — | API key for authentication |
-| `CODEFUNDI_BASE_URL` | No | `https://codefundi.app` | API base URL override |
+| `CODEFUNDI_BASE_URL` | No | `https://api.codefundi.app` | API base URL override |
 
 \* Required unless using agent-driven auth tools.
 

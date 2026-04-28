@@ -69,7 +69,7 @@ export class CodeFundiClient {
   private apiKey: string | null;
 
   constructor(baseUrl?: string, apiKey?: string) {
-    this.baseUrl = (baseUrl || "https://codefundi.app").replace(/\/$/, "");
+    this.baseUrl = (baseUrl || "https://api.codefundi.app").replace(/\/$/, "");
     this.apiKey = apiKey || null;
   }
 
