@@ -22,7 +22,7 @@ import { registerChatTools } from "./tools/chat.js";
 
 const server = new FastMCP({
   name: "Code-Fundi",
-  version: "1.0.0",
+  version: "0.1.0",
 });
 
 // Register all tool groups

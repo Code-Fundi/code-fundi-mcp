@@ -37,7 +37,7 @@ export function registerRepoTools(server: FastMCP): void {
   server.addTool({
     name: "code-fundi-index-repo",
     description:
-      "Index a new GitHub or GitLab repository in Code-Fundi, or update an existing one. " +
+      "Index a new GitHub repository in Code-Fundi, or update an existing one. " +
       "After indexing, the repository's files will be searchable via code-fundi-search.",
     parameters: z.object({
       url: z.string().describe("Git clone URL (e.g. https://github.com/owner/repo)"),

@@ -1,6 +1,6 @@
 {
   "name": "code-fundi-mcp",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "MCP server for the Code-Fundi API — search, research, index, and manage code repositories via any MCP-compatible AI assistant.",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,8 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "inspect": "npx fastmcp inspect src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
   },
   "keywords": [
     "mcp",
@@ -29,7 +30,8 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=18.0.0"

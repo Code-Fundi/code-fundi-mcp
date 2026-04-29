@@ -1,6 +1,35 @@
+<p align="center">
+ <h2 align="center"><b>Code Fundi</b></h2>
+ <p align="center">The Codebase Context Layer for Agents, Teams and Applications.</p>
+</p>
+</p>
+<p align="center">
+ <img width="200px" src="https://github.com/Code-Fundi/.github/blob/main/media/logo-text(colour).png?raw=true" align="center" alt="Code Fundi" />
+ </br>
+</p>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/static/v1?label=Stage&message=Alpha&color=0071f3" />
+  <a href="https://www.gnu.org/licenses/agpl-3.0">
+    <img src="https://img.shields.io/static/v1?label=Licence&message=AGPL%20v3&color=000" />
+  </a>
+  <br />
+  <a href="https://discord.gg/6RJTWCuWZj">
+    <img src="https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white" />
+  </a>
+  <a href="https://twitter.com/code_fundi">
+    <img src="https://img.shields.io/badge/Twitter-00acee?logo=twitter&logoColor=white" />
+  </a>
+  <a href="https://www.tiktok.com/@codefundi">
+    <img src="https://img.shields.io/badge/TikTok-000000?logo=tiktok&logoColor=white" />
+  </a>
+<br />
+</p>
+
 # Code-Fundi MCP Server
 
-A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the [Code-Fundi](https://api.codefundi.app) API. Enables any MCP-compatible AI assistant — Claude, Cursor, Windsurf, VS Code Copilot, and more — to search, research, index, and manage code repositories through natural language.
+A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the [Code-Fundi](https://api.codefundi.app) API. Enables any MCP-compatible AI assistant — Claude, Cursor, Windsurf, VS Code Copilot, and more — to search, research, index, and scan code repositories through natural language.
 
 Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod](https://zod.dev) for schema validation.
 
@@ -91,7 +120,7 @@ npx fastmcp dev src/index.ts        # Test with MCP CLI
 | Tool | Description |
 |------|-------------|
 | `code-fundi-list-repos` | List indexed repositories with pagination |
-| `code-fundi-index-repo` | Index a new GitHub/GitLab repository |
+| `code-fundi-index-repo` | Index a new GitHub repository |
 | `code-fundi-repo-status` | Check repository indexing status |
 | `code-fundi-repo-readme` | Get repository README documentation |
 
