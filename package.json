@@ -1,5 +1,5 @@
 {
-  "name": "code-fundi-mcp",
+  "name": "@codefundi/code-fundi-mcp",
   "version": "0.1.0",
   "description": "MCP server for the Code-Fundi API — search, research, index, and manage code repositories via any MCP-compatible AI assistant.",
   "type": "module",
@@ -9,11 +9,16 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "dev": "tsx src/index.ts",
     "inspect": "npx fastmcp inspect src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "keywords": [
     "mcp",
     "code-fundi",

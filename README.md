@@ -45,14 +45,30 @@ Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod]
 
 ## Quick Start
 
-### 1. Install
+### Install from npm (recommended)
+
+Install the package (includes a pre-built `dist/`). The `code-fundi-mcp` binary is on your `PATH` when installed globally, or available via `npx` without cloning the repo:
 
 ```bash
+npm install -g code-fundi-mcp
+```
+
+Or add it to a project:
+
+```bash
+npm install code-fundi-mcp
+```
+
+### Install from source (this repository)
+
+```bash
+git clone https://github.com/Code-Fundi/code-fundi-mcp.git
+cd code-fundi-mcp
 npm install
 npm run build
 ```
 
-### 2. Configure
+### Configure
 
 Set your API key as an environment variable:
 
@@ -62,16 +78,15 @@ export CODEFUNDI_API_KEY=your_api_key_here
 
 Or skip this step — agents can authenticate dynamically using the `code-fundi-auth-*` tools.
 
-### 3. Use with Claude Desktop
+### Use with Claude Desktop
 
-Add to your `claude_desktop_config.json`:
+After a global install (`npm i -g code-fundi-mcp`), point MCP at the published binary — **no path to `dist/index.js` required**:
 
 ```json
 {
   "mcpServers": {
     "code-fundi": {
-      "command": "node",
-      "args": ["path/to/code-fundi-mcp/dist/index.js"],
+      "command": "code-fundi-mcp",
       "env": {
         "CODEFUNDI_API_KEY": "your_api_key_here"
       }
@@ -80,16 +95,14 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-### 4. Use with Cursor
-
-Add to your Cursor MCP settings:
+If the binary is not on your `PATH`, use `npx` (downloads or uses the local package and runs the same entrypoint):
 
 ```json
 {
   "mcpServers": {
     "code-fundi": {
-      "command": "node",
-      "args": ["path/to/code-fundi-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "code-fundi-mcp"],
       "env": {
         "CODEFUNDI_API_KEY": "your_api_key_here"
       }
@@ -97,6 +110,26 @@ Add to your Cursor MCP settings:
   }
 }
 ```
+
+### Use with Cursor
+
+Same pattern as Claude — `command` + optional `args` only; no manual path to the repo:
+
+```json
+{
+  "mcpServers": {
+    "code-fundi": {
+      "command": "npx",
+      "args": ["-y", "code-fundi-mcp"],
+      "env": {
+        "CODEFUNDI_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+When developing **inside this repo**, you can run `npm run dev` or `npx tsx src/index.ts` without building first.
 
 ### Development Mode
 
@@ -106,7 +139,9 @@ npx fastmcp inspect src/index.ts    # Open MCP Inspector UI
 npx fastmcp dev src/index.ts        # Test with MCP CLI
 ```
 
-## Tools Reference (21 tools)
+## Tools Reference (22 tools)
+
+Covers the Code-Fundi **V2** API: search (including search-with-chat / research), repositories (list, index, status, readme), files, history, statistics, API keys, authentication, plus **Fundi chat** and the model catalog (`POST /v1/fundi/chat`, `GET /v1/fundi/models` — there is no separate `/v2/chat` in the published OpenAPI).
 
 ### Search
 
@@ -156,12 +191,13 @@ npx fastmcp dev src/index.ts        # Test with MCP CLI
 | `code-fundi-auth-resend` | Resend OTP verification email |
 | `code-fundi-list-api-keys` | List API keys (masked) |
 | `code-fundi-regenerate-api-key` | Regenerate API key |
+| `code-fundi-disable-api-key` | Disable an API key by ID (`DELETE /v2/keys/{key_id}`) |
 
 ### Chat & Models
 
 | Tool | Description |
 |------|-------------|
-| `code-fundi-chat` | Chat with Code-Fundi AI |
+| `code-fundi-chat` | Fundi AI chat (`POST /v1/fundi/chat`; streamed responses are collected to text) |
 | `code-fundi-list-models` | List available AI models |
 
 ## Authentication

@@ -1,5 +1,9 @@
 /**
- * Code-Fundi MCP — Chat & Models Tools (V1, no V2 equivalent)
+ * Code-Fundi MCP — Chat & Models
+ *
+ * Chat uses `POST /v1/fundi/chat` (OpenAPI "AI Chat"). The production API streams HTML;
+ * the client collects the full body into a single string for MCP tools.
+ * Model catalog uses `GET /v1/fundi/models` (no separate `/v2/chat` in the published OpenAPI).
  */
 
 import type { FastMCP } from "fastmcp";
@@ -11,12 +15,19 @@ export function registerChatTools(server: FastMCP): void {
   server.addTool({
     name: "code-fundi-chat",
     description:
-      "Send a chat message to the Code-Fundi AI. " +
-      "Supports conversation threading and optional context from previous messages.",
+      "Send a message to Code-Fundi AI (Fundi chat: POST /v1/fundi/chat). " +
+      "Supports threading, optional code context, indexed repository knowledge (`knowledge_id`), embeddings memory, and voice mode. " +
+      "Responses are streamed by the API and returned as plain text (or JSON when the server uses JSON mode).",
     parameters: z.object({
-      prompt: z.string().describe("The message to send to the AI"),
+      prompt: z.string().describe("User message (sent to the API as `question`)"),
       model: z.string().optional().describe("AI model ID to use"),
       conversation: z.string().optional().describe("Conversation ID for threading (continues a previous conversation)"),
+      code_block: z.string().optional().describe("Optional code snippet combined with the question for code-aware answers"),
+      knowledge_id: z.array(z.string()).optional().describe(
+        "Repository / data-source UUIDs to pull indexed knowledge context into the chat (API field `knowledge`)",
+      ),
+      embed: z.boolean().optional().describe("Enable conversation memory via embeddings (default false)"),
+      voice: z.boolean().optional().describe("Request voice/audio path on the server (default false)"),
       context: z.array(z.object({
         role: z.enum(["user", "assistant", "system"]).optional(),
         content: z.string().optional(),
@@ -31,6 +42,10 @@ export function registerChatTools(server: FastMCP): void {
           model: args.model,
           conversation: args.conversation,
           context: args.context,
+          code_block: args.code_block,
+          knowledge_id: args.knowledge_id,
+          embed: args.embed,
+          voice: args.voice,
         });
         const parts: string[] = [];
         if (res.response) parts.push(res.response);

@@ -13,7 +13,7 @@ import type {
   FileListResponse, FileDocumentationResponse, HistoryListResponse,
   HistoryItemResponse, ConversationResponse, UsageStatsResponse,
   ActivityStatsResponse, LanguageStatsResponse, ApiKeysListResponse,
-  ApiKeyRegenerateResponse, V2AuthAuthenticateResponse,
+  ApiKeyRegenerateResponse, ApiKeyDeleteResponse, V2AuthAuthenticateResponse,
   V2AuthVerifyResponse, V2AuthResendResponse, V2AuthMode,
   ChatRequest, ChatResponse, ModelsResponse, SearchFieldsParam,
   SortOrder, StatsRange, RepoScope, HistoryCategory, ErrorResponse,
@@ -92,6 +92,19 @@ export class CodeFundiClient {
     return h;
   }
 
+  private async readHttpError(res: Response): Promise<{ msg: string; code?: string; retryAfter?: number }> {
+    try {
+      const body = (await res.json()) as ErrorResponse & { retry_after?: number };
+      return {
+        msg: body.message || `${res.status} ${res.statusText}`,
+        code: body.code,
+        retryAfter: typeof body.retry_after === "number" ? body.retry_after : undefined,
+      };
+    } catch {
+      return { msg: `${res.status} ${res.statusText}` };
+    }
+  }
+
   private async request<T>(endpoint: string, init: RequestInit = {}, streaming = false): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const res = await fetch(url, {
@@ -99,17 +112,38 @@ export class CodeFundiClient {
       headers: { ...this.authHeaders(), ...(init.headers as Record<string, string> || {}) },
     });
     if (!res.ok) {
-      let msg: string, code: string | undefined, retryAfter: number | undefined;
-      try {
-        const body = (await res.json()) as ErrorResponse & { retry_after?: number };
-        msg = body.message || `${res.status} ${res.statusText}`;
-        code = body.code;
-        retryAfter = typeof body.retry_after === "number" ? body.retry_after : undefined;
-      } catch { msg = `${res.status} ${res.statusText}`; }
+      const { msg, code, retryAfter } = await this.readHttpError(res);
       throw new CodeFundiApiError(msg, res.status, { code, retryAfter });
     }
     if (streaming) return res.body as T;
     return (await res.json()) as T;
+  }
+
+  /**
+   * `/v1/fundi/chat` streams `text/html` (or multipart when voice/knowledge/dev-agent paths apply).
+   * Collect non-JSON bodies into `response` for MCP tools.
+   */
+  private async parseFundiChatResponse(res: Response): Promise<ChatResponse> {
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      return (await res.json()) as ChatResponse;
+    }
+    const text = await res.text();
+    return { status: "success", response: text };
+  }
+
+  private buildV1ChatBody(req: ChatRequest): Record<string, unknown> {
+    const body: Record<string, unknown> = {
+      question: req.prompt,
+      model: req.model ?? null,
+      conversation: req.conversation ?? null,
+      context: req.context ?? null,
+      embed: req.embed ?? false,
+      voice: req.voice ?? false,
+    };
+    if (req.code_block !== undefined && req.code_block !== "") body.code_block = req.code_block;
+    if (req.knowledge_id?.length) body.knowledge = req.knowledge_id;
+    return Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined && v !== null));
   }
 
   private async postUnauth<T>(endpoint: string, body: unknown, extra?: Record<string, string>): Promise<T> {
@@ -240,12 +274,12 @@ export class CodeFundiClient {
 
   // ==== V2 Stats ====
 
-  async getUsageStats(range: StatsRange = "7d"): Promise<UsageStatsResponse> {
+  async getUsageStats(range: StatsRange | string = "7d"): Promise<UsageStatsResponse> {
     this.requireApiKey();
     return this.request<UsageStatsResponse>(`/v2/stats/usage${buildQuery({ range })}`, { method: "GET" });
   }
 
-  async getActivityStats(range: StatsRange = "7d"): Promise<ActivityStatsResponse> {
+  async getActivityStats(range: StatsRange | string = "7d"): Promise<ActivityStatsResponse> {
     this.requireApiKey();
     return this.request<ActivityStatsResponse>(`/v2/stats/activity${buildQuery({ range })}`, { method: "GET" });
   }
@@ -267,6 +301,11 @@ export class CodeFundiClient {
     return this.request<ApiKeyRegenerateResponse>("/v2/keys/regenerate", { method: "POST" });
   }
 
+  async deleteApiKey(keyId: string): Promise<ApiKeyDeleteResponse> {
+    this.requireApiKey();
+    return this.request<ApiKeyDeleteResponse>(`/v2/keys/${encodeURIComponent(keyId)}`, { method: "DELETE" });
+  }
+
   // ==== V2 Auth (unauthenticated) ====
 
   async authAuthenticate(p: { email: string; auth_mode: V2AuthMode; should_create_user?: boolean; authPassword?: string }): Promise<V2AuthAuthenticateResponse> {
@@ -285,11 +324,21 @@ export class CodeFundiClient {
     return this.postUnauth<V2AuthResendResponse>("/v2/auth/resend", { email: p.email, type: p.type ?? "signup" });
   }
 
-  // ==== V1 Chat & Models ====
+  // ==== V1 Chat & Models (OpenAPI: AI Chat; server body uses `question`, not `prompt`) ====
 
   async chat(req: ChatRequest): Promise<ChatResponse> {
     this.requireApiKey();
-    return this.request<ChatResponse>("/v1/fundi/chat", { method: "POST", body: JSON.stringify(req) });
+    const url = `${this.baseUrl}/v1/fundi/chat`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: this.authHeaders(),
+      body: JSON.stringify(this.buildV1ChatBody(req)),
+    });
+    if (!res.ok) {
+      const { msg, code, retryAfter } = await this.readHttpError(res);
+      throw new CodeFundiApiError(msg, res.status, { code, retryAfter });
+    }
+    return this.parseFundiChatResponse(res);
   }
 
   async getModels(): Promise<ModelsResponse> {

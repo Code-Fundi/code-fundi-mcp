@@ -98,6 +98,10 @@ describe("CodeFundiClient", () => {
       await expect(noKeyClient.listApiKeys()).rejects.toThrow(CodeFundiApiError);
     });
 
+    it("deleteApiKey should throw without API key", async () => {
+      await expect(noKeyClient.deleteApiKey("550e8400-e29b-41d4-a716-446655440000")).rejects.toThrow(CodeFundiApiError);
+    });
+
     it("chat should throw without API key", async () => {
       await expect(noKeyClient.chat({ prompt: "hello" })).rejects.toThrow(CodeFundiApiError);
     });
@@ -169,9 +173,46 @@ describe("CodeFundiClient", () => {
       const [url, options] = mockFetch.mock.calls[0];
       expect(url).toBe("https://api.test.codefundi.app/v2/search");
       expect(options.method).toBe("POST");
-      const body = JSON.parse(options.body);
+      const body = JSON.parse(options.body as string);
       expect(body.query).toBe("hello world");
       expect(body.scope).toBe("code");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("should POST chat with question field and parse text/html body", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+        json: async () => { throw new Error("not json"); },
+        text: async () => "<p>Hello from Fundi</p>",
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const res = await client.chat({ prompt: "Hi there" });
+
+      const [, options] = mockFetch.mock.calls[0];
+      const body = JSON.parse(options.body as string);
+      expect(body.question).toBe("Hi there");
+      expect(body.prompt).toBeUndefined();
+      expect(res.response).toBe("<p>Hello from Fundi</p>");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("should DELETE /v2/keys/{id}", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ status: "success", data: { id: "k1", deleted: true } }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const id = "550e8400-e29b-41d4-a716-446655440000";
+      await client.deleteApiKey(id);
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe(`https://api.test.codefundi.app/v2/keys/${id}`);
+      expect(options.method).toBe("DELETE");
 
       vi.unstubAllGlobals();
     });

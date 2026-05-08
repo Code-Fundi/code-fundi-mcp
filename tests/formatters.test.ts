@@ -214,6 +214,18 @@ describe("formatModels", () => {
     expect(result).toContain("openai");
     expect(result).toContain("PRO");
   });
+
+  it("should derive tier from tier_requirements when tier_required is absent", () => {
+    const result = formatModels([
+      {
+        id: "m1",
+        name: "Model",
+        provider: "openai",
+        tier_requirements: { premium_only: true },
+      },
+    ]);
+    expect(result).toContain("PRO");
+  });
 });
 
 // ==== Errors ====

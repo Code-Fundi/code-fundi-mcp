@@ -9,18 +9,19 @@
 // Common Types
 // ============================================================================
 
-export type TierName = "FREE" | "DEV" | "PRO" | "ENTERPRISE" | "ADMIN";
+export type TierName = "FREE" | "DEV" | "PRO" | "ENTERPRISE";
 
 export type SearchScope = "all" | "repos" | "files" | "code" | "functions";
 
 export type ScanMode = "semantic" | "grep_docs" | "grep_code";
 
-export type FieldsPreset = "basic" | "summary" | "full" | "raw";
+export type FieldsPreset = "basic" | "summary" | "full";
 export type SearchFieldsParam = FieldsPreset | string;
 
 export type SortOrder = "asc" | "desc";
 
-export type StatsRange = "1d" | "7d" | "30d" | "60d" | "90d" | "365d";
+/** OpenAPI `range` for `/v2/stats/usage` and `/v2/stats/activity` (7d | 30d | 90d). */
+export type StatsRange = "7d" | "30d" | "90d";
 
 export type RepoScope = "private" | "public";
 
@@ -491,6 +492,13 @@ export interface ApiKeyRegenerateResponse extends BaseResponse<ApiKeyRegenerateD
   message?: string;
 }
 
+export interface ApiKeyDeleteData {
+  id?: string;
+  deleted?: boolean;
+}
+
+export interface ApiKeyDeleteResponse extends BaseResponse<ApiKeyDeleteData> {}
+
 // ============================================================================
 // V2 Auth Types
 // ============================================================================
@@ -554,13 +562,22 @@ export interface ChatContext {
   [key: string]: unknown;
 }
 
+/**
+ * Fundi chat request (MCP-facing). Serialized to `/v1/fundi/chat` as the server expects
+ * `question` (and optional `code_block`, `knowledge`, etc.).
+ */
 export interface ChatRequest {
+  /** User message (sent as `question` to the API). */
   prompt: string;
   model?: string;
   embed?: boolean;
   context?: ChatContext[];
   voice?: boolean;
   conversation?: string;
+  /** Optional highlighted code; combined with `prompt` on the server. */
+  code_block?: string;
+  /** Repository / data-source IDs for indexed knowledge context (`knowledge` in API body). */
+  knowledge_id?: string[];
 }
 
 export interface ChatUsage {
@@ -582,7 +599,15 @@ export interface AIModel {
   id: string;
   name: string;
   provider: string;
-  tier_required: TierName;
+  /** Present on normalized MCP catalog entries. */
+  tier_required?: TierName;
+  /** Raw `/v1/fundi/models` entries from OpenRouter catalog mapping. */
+  tier_requirements?: {
+    premium_only?: boolean;
+    default_model?: boolean;
+    preview_mode?: unknown;
+  };
+  context_length?: number;
 }
 
 export interface ModelsResponse {

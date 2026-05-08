@@ -9,7 +9,7 @@ import type {
   FileListItem, FileDocumentationData, HistoryItem,
   UsageByType, ActivityByDay, LanguageStat,
   ApiKey, AIModel, ReadmeData, RepoStatusData,
-  RepositoryIndexInitRepo, Pagination,
+  RepositoryIndexInitRepo, Pagination, TierName,
 } from "./types.js";
 import { CodeFundiApiError } from "./client.js";
 
@@ -304,7 +304,10 @@ export function formatModels(models: AIModel[]): string {
   parts.push("| Name | Provider | Tier |");
   parts.push("|------|----------|------|");
   for (const m of models) {
-    parts.push(`| ${m.name} | ${m.provider} | ${m.tier_required} |`);
+    const tier =
+      m.tier_required
+      ?? (m.tier_requirements?.premium_only ? "PRO" as TierName : "FREE" as TierName);
+    parts.push(`| ${m.name} | ${m.provider} | ${tier} |`);
   }
   return parts.join("\n");
 }

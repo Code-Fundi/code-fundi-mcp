@@ -164,4 +164,25 @@ export function registerAuthTools(server: FastMCP): void {
       } catch (err) { return formatError(err); }
     },
   });
+
+  server.addTool({
+    name: "code-fundi-disable-api-key",
+    description:
+      "Disable a Code-Fundi API key by UUID (`DELETE /v2/keys/{key_id}`). " +
+      "Use `code-fundi-list-api-keys` to find key IDs. Does not rotate the active key unless you disable the one in use.",
+    parameters: z.object({
+      key_id: z.string().uuid().describe("API key UUID to disable"),
+    }),
+    annotations: { title: "Disable API Key", readOnlyHint: false, destructiveHint: true },
+    execute: async (args) => {
+      try {
+        const client = getClient();
+        const res = await client.deleteApiKey(args.key_id);
+        if (res.status === "success" || res.data?.deleted) {
+          return res.message || `API key \`${args.key_id}\` disabled.`;
+        }
+        return res.message || "Disable request completed.";
+      } catch (err) { return formatError(err); }
+    },
+  });
 }
