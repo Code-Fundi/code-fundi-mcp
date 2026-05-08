@@ -4,6 +4,12 @@
   "description": "MCP server for the Code-Fundi API — search, research, index, and manage code repositories via any MCP-compatible AI assistant.",
   "type": "module",
   "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Code-Fundi/code-fundi-mcp"
+  },
+  "homepage": "https://codefundi.app",
+  "author": "Code Fundi",
   "bin": {
     "code-fundi-mcp": "dist/index.js"
   },
