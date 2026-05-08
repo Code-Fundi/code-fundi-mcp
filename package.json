@@ -1,6 +1,6 @@
 {
   "name": "@codefundi/code-fundi-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server for the Code-Fundi API — search, research, index, and manage code repositories via any MCP-compatible AI assistant.",
   "type": "module",
   "main": "dist/index.js",
@@ -36,7 +36,7 @@
   "license": "MIT",
   "dependencies": {
     "fastmcp": "^4.0.0",
-    "zod": "^4.0.0"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
