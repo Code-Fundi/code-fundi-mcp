@@ -1,6 +1,6 @@
 {
   "name": "@codefundi/code-fundi-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server for the Code-Fundi API — search, research, index, and manage code repositories via any MCP-compatible AI assistant.",
   "type": "module",
   "main": "dist/index.js",
