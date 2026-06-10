@@ -9,19 +9,19 @@
 // Common Types
 // ============================================================================
 
-export type TierName = "FREE" | "DEV" | "PRO" | "ENTERPRISE";
+export type TierName = "FREE" | "DEV" | "PRO" | "ENTERPRISE" | "ADMIN";
 
 export type SearchScope = "all" | "repos" | "files" | "code" | "functions";
 
 export type ScanMode = "semantic" | "grep_docs" | "grep_code";
 
-export type FieldsPreset = "basic" | "summary" | "full";
+export type FieldsPreset = "basic" | "summary" | "full" | "raw";
 export type SearchFieldsParam = FieldsPreset | string;
 
 export type SortOrder = "asc" | "desc";
 
-/** OpenAPI `range` for `/v2/stats/usage` and `/v2/stats/activity` (7d | 30d | 90d). */
-export type StatsRange = "7d" | "30d" | "90d";
+/** Matches backend parseStatsRange format /^(\d+)d$/i (common values listed). */
+export type StatsRange = "1d" | "7d" | "30d" | "60d" | "90d" | "365d";
 
 export type RepoScope = "private" | "public";
 
@@ -550,6 +550,59 @@ export interface V2AuthVerifyResponse {
 export interface V2AuthResendResponse {
   status: "ok";
   data: Record<string, unknown>;
+}
+
+/** Optional request headers for /v2/auth/* calls. */
+export interface V2AuthClientRequestOptions {
+  /** Sent as Idempotency-Key. */
+  idempotencyKey?: string;
+  /** Sent as X-Fingerprint for rate-limit identity pairing. */
+  fingerprint?: string;
+  /**
+   * Header used for password auth mode.
+   * - x-codefundi-auth-password => X-CodeFundi-Auth-Password (default)
+   * - x-auth-password => X-Auth-Password
+   */
+  passwordHeader?: "x-codefundi-auth-password" | "x-auth-password";
+}
+
+// ============================================================================
+// V2 Chat Types
+// ============================================================================
+
+export interface V2ChatMessage {
+  role?: "user" | "assistant" | "system";
+  content?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * V2 chat payload. This is intentionally flexible because deployments may expose
+ * additional request keys beyond the stable set represented here.
+ */
+export interface V2ChatRequest {
+  prompt: string;
+  model?: string;
+  conversation_id?: string;
+  repo_ids?: string[];
+  repo_urls?: string[];
+  context?: V2ChatMessage[];
+  stream?: boolean;
+  /**
+   * Optional provider/deployment-specific keys merged into the request body.
+   * Prefer explicit top-level keys when available.
+   */
+  extra?: Record<string, unknown>;
+}
+
+/** Normalized result returned from chatV2 after JSON/NDJSON/text parsing. */
+export interface V2ChatResult {
+  text: string;
+  model?: string;
+  conversationId?: string;
+  contextFiles?: number;
+  searchResults?: SearchResult[];
+  raw?: unknown;
 }
 
 // ============================================================================

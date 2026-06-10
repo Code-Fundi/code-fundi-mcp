@@ -139,9 +139,9 @@ npx fastmcp inspect src/index.ts    # Open MCP Inspector UI
 npx fastmcp dev src/index.ts        # Test with MCP CLI
 ```
 
-## Tools Reference (22 tools)
+## Tools Reference (23 tools)
 
-Covers the Code-Fundi **V2** API: search (including search-with-chat / research), repositories (list, index, status, readme), files, history, statistics, API keys, authentication, plus **Fundi chat** and the model catalog (`POST /v1/fundi/chat`, `GET /v1/fundi/models` — there is no separate `/v2/chat` in the published OpenAPI).
+Covers the Code-Fundi **V2** API: search (including search-with-chat / research), chat v2, repositories (list, index, status, readme), files, history, statistics, API keys, and authentication. Also includes legacy Fundi chat + model catalog (`POST /v1/fundi/chat`, `GET /v1/fundi/models`) for backward compatibility.
 
 ### Search
 
@@ -197,6 +197,7 @@ Covers the Code-Fundi **V2** API: search (including search-with-chat / research)
 
 | Tool | Description |
 |------|-------------|
+| `code-fundi-chat-v2` | Primary v2 chat endpoint (`POST /v2/chat`) with normalized JSON/NDJSON responses |
 | `code-fundi-chat` | Fundi AI chat (`POST /v1/fundi/chat`; streamed responses are collected to text) |
 | `code-fundi-list-models` | List available AI models |
 

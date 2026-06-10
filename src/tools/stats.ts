@@ -12,7 +12,7 @@ export function registerStatsTools(server: FastMCP): void {
     name: "code-fundi-usage-stats",
     description: "Get query-type usage statistics for a given date range. Shows breakdown by query type with counts, credit costs, and average durations.",
     parameters: z.object({
-      range: z.enum(["7d", "30d", "90d"]).optional().describe("Time range per OpenAPI (default: 7d)"),
+      range: z.string().regex(/^\d+d$/i).optional().describe("Time range in days, e.g. 1d, 7d, 30d, 60d, 90d, 365d"),
     }),
     annotations: { title: "Usage Statistics", readOnlyHint: true },
     execute: async (args) => {
@@ -29,7 +29,7 @@ export function registerStatsTools(server: FastMCP): void {
     name: "code-fundi-activity-stats",
     description: "Get daily activity statistics for a given date range. Shows queries per day with credit costs.",
     parameters: z.object({
-      range: z.enum(["7d", "30d", "90d"]).optional().describe("Time range per OpenAPI (default: 7d)"),
+      range: z.string().regex(/^\d+d$/i).optional().describe("Time range in days, e.g. 1d, 7d, 30d, 60d, 90d, 365d"),
     }),
     annotations: { title: "Activity Statistics", readOnlyHint: true },
     execute: async (args) => {
