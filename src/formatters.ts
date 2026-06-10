@@ -10,6 +10,7 @@ import type {
   UsageByType, ActivityByDay, LanguageStat,
   ApiKey, AIModel, ReadmeData, RepoStatusData,
   RepositoryIndexInitRepo, Pagination, TierName,
+  V2ChatResult,
 } from "./types.js";
 import { CodeFundiApiError } from "./client.js";
 
@@ -72,6 +73,22 @@ export function formatResearchResult(result: ResearchResult): string {
   if (result.model) parts.push(`_Model: ${result.model}_`);
   if (result.contextFiles) parts.push(`_Context files: ${result.contextFiles}_`);
 
+  return parts.join("\n");
+}
+
+export function formatV2ChatResult(result: V2ChatResult): string {
+  const parts: string[] = [];
+  if (result.text.trim()) {
+    parts.push(result.text.trim());
+  } else {
+    parts.push("_No response generated._");
+  }
+  if (result.model) parts.push(`\n_Model: ${result.model}_`);
+  if (result.conversationId) parts.push(`_Conversation: ${result.conversationId}_`);
+  if (result.contextFiles !== undefined) parts.push(`_Context files: ${result.contextFiles}_`);
+  if (result.searchResults?.length) {
+    parts.push(`\n_Context sources: ${result.searchResults.length} file(s)._`);
+  }
   return parts.join("\n");
 }
 

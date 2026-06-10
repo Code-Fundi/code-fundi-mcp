@@ -17,7 +17,10 @@ import type {
   V2AuthVerifyResponse, V2AuthResendResponse, V2AuthMode,
   ChatRequest, ChatResponse, ModelsResponse, SearchFieldsParam,
   SortOrder, StatsRange, RepoScope, HistoryCategory, ErrorResponse,
+  V2AuthClientRequestOptions, V2ChatRequest, V2ChatResult,
 } from "./types.js";
+
+export const CODEFUNDI_DEFAULT_CHAT_MODEL_ID = "openai/gpt-oss-120b:free" as const;
 
 // ============================================================================
 // Error
@@ -146,6 +149,16 @@ export class CodeFundiClient {
     return Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined && v !== null));
   }
 
+  private mergeV2AuthClientHeaders(
+    base: Record<string, string>,
+    options?: V2AuthClientRequestOptions,
+  ): Record<string, string> {
+    const out = { ...base };
+    if (options?.idempotencyKey) out["Idempotency-Key"] = options.idempotencyKey;
+    if (options?.fingerprint) out["X-Fingerprint"] = options.fingerprint;
+    return out;
+  }
+
   private async postUnauth<T>(endpoint: string, body: unknown, extra?: Record<string, string>): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const res = await fetch(url, {
@@ -162,6 +175,64 @@ export class CodeFundiClient {
       });
     }
     return json as T;
+  }
+
+  private extractStringCandidate(...candidates: unknown[]): string | undefined {
+    for (const value of candidates) {
+      if (typeof value === "string" && value.trim()) {
+        return value;
+      }
+    }
+    return undefined;
+  }
+
+  private normalizeV2ChatJson(payload: unknown): V2ChatResult {
+    if (!payload || typeof payload !== "object") {
+      return { text: "", raw: payload };
+    }
+
+    const root = payload as Record<string, unknown>;
+    const data = (root.data && typeof root.data === "object")
+      ? root.data as Record<string, unknown>
+      : undefined;
+
+    const text = this.extractStringCandidate(
+      root.response, root.text, root.message, root.content,
+      data?.response, data?.text, data?.message, data?.content,
+    ) ?? "";
+
+    const model = this.extractStringCandidate(root.model, data?.model);
+    const conversationId = this.extractStringCandidate(
+      root.conversation_id,
+      root.conversationId,
+      data?.conversation_id,
+      data?.conversationId,
+    );
+
+    const searchResultsRaw =
+      Array.isArray(root.search_results) ? root.search_results
+      : Array.isArray(root.results) ? root.results
+      : Array.isArray(data?.search_results) ? data.search_results
+      : Array.isArray(data?.results) ? data.results
+      : undefined;
+
+    const searchResults = Array.isArray(searchResultsRaw)
+      ? searchResultsRaw as SearchResult[]
+      : undefined;
+
+    const contextFilesRaw =
+      typeof root.context_files === "number" ? root.context_files
+      : typeof data?.context_files === "number" ? data.context_files
+      : undefined;
+
+    return {
+      text,
+      model,
+      conversationId,
+      contextFiles: contextFilesRaw,
+      searchResults,
+      raw: payload,
+    };
   }
 
   // ---- NDJSON ----
@@ -200,6 +271,19 @@ export class CodeFundiClient {
     } finally { reader.releaseLock(); }
 
     return { text, searchResults, searchMeta, model, contextFiles };
+  }
+
+  async collectV2ChatNdjsonStream(stream: ReadableStream<Uint8Array>): Promise<V2ChatResult> {
+    const research = await this.collectNdjsonStream(stream);
+    return {
+      text: research.text,
+      model: research.model,
+      contextFiles: research.contextFiles,
+      searchResults: research.searchResults,
+      raw: {
+        searchMeta: research.searchMeta,
+      },
+    };
   }
 
   // ==== V2 Search ====
@@ -308,20 +392,120 @@ export class CodeFundiClient {
 
   // ==== V2 Auth (unauthenticated) ====
 
-  async authAuthenticate(p: { email: string; auth_mode: V2AuthMode; should_create_user?: boolean; authPassword?: string }): Promise<V2AuthAuthenticateResponse> {
+  async authAuthenticate(
+    p: {
+      email: string;
+      auth_mode?: V2AuthMode;
+      mode?: V2AuthMode;
+      should_create_user?: boolean;
+      authPassword?: string;
+      data?: Record<string, unknown>;
+    },
+    request?: V2AuthClientRequestOptions,
+  ): Promise<V2AuthAuthenticateResponse> {
+    const authMode = p.auth_mode ?? p.mode;
+    if (!authMode) {
+      throw new TypeError("authAuthenticate requires auth_mode or mode");
+    }
+    const passHeader =
+      request?.passwordHeader === "x-auth-password"
+        ? "X-Auth-Password"
+        : "X-CodeFundi-Auth-Password";
     const h: Record<string, string> = {};
-    if (p.auth_mode === "password" && p.authPassword) h["X-CodeFundi-Auth-Password"] = p.authPassword;
+    if (authMode === "password" && p.authPassword) h[passHeader] = p.authPassword;
     return this.postUnauth<V2AuthAuthenticateResponse>("/v2/auth/authenticate", {
-      auth_mode: p.auth_mode, email: p.email, should_create_user: p.should_create_user ?? false,
-    }, h);
+      auth_mode: authMode,
+      email: p.email,
+      should_create_user: p.should_create_user ?? false,
+      ...(p.data ? { data: p.data } : {}),
+    }, this.mergeV2AuthClientHeaders(h, request));
   }
 
-  async authVerify(p: { email: string; token: string }): Promise<V2AuthVerifyResponse> {
-    return this.postUnauth<V2AuthVerifyResponse>("/v2/auth/verify", p);
+  async authVerify(
+    p: { email: string; token: string },
+    request?: V2AuthClientRequestOptions,
+  ): Promise<V2AuthVerifyResponse> {
+    return this.postUnauth<V2AuthVerifyResponse>(
+      "/v2/auth/verify",
+      p,
+      this.mergeV2AuthClientHeaders({}, request),
+    );
   }
 
-  async authResend(p: { email: string; type?: "signup" | "email_change" | "email" }): Promise<V2AuthResendResponse> {
-    return this.postUnauth<V2AuthResendResponse>("/v2/auth/resend", { email: p.email, type: p.type ?? "signup" });
+  async authResend(
+    p: { email: string; type?: "signup" | "email_change" | "email" },
+    request?: V2AuthClientRequestOptions,
+  ): Promise<V2AuthResendResponse> {
+    return this.postUnauth<V2AuthResendResponse>(
+      "/v2/auth/resend",
+      { email: p.email, type: p.type ?? "signup" },
+      this.mergeV2AuthClientHeaders({}, request),
+    );
+  }
+
+  // ==== V2 Chat ====
+
+  async chatV2(
+    req: V2ChatRequest,
+    options?: { fallbackToV1?: boolean },
+  ): Promise<V2ChatResult> {
+    this.requireApiKey();
+    const body: Record<string, unknown> = {
+      prompt: req.prompt,
+      model: req.model ?? CODEFUNDI_DEFAULT_CHAT_MODEL_ID,
+      conversation_id: req.conversation_id,
+      repo_ids: req.repo_ids,
+      repo_urls: req.repo_urls,
+      context: req.context,
+      stream: req.stream,
+      ...(req.extra || {}),
+    };
+
+    const normalizedBody = Object.fromEntries(
+      Object.entries(body).filter(([, value]) => value !== undefined && value !== null),
+    );
+
+    try {
+      const res = await fetch(`${this.baseUrl}/v2/chat`, {
+        method: "POST",
+        headers: this.authHeaders(),
+        body: JSON.stringify(normalizedBody),
+      });
+      if (!res.ok) {
+        const { msg, code, retryAfter } = await this.readHttpError(res);
+        throw new CodeFundiApiError(msg, res.status, { code, retryAfter });
+      }
+
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      if (ct.includes("ndjson")) {
+        if (!res.body) return { text: "" };
+        return this.collectV2ChatNdjsonStream(res.body);
+      }
+      if (ct.includes("application/json")) {
+        const payload = await res.json();
+        return this.normalizeV2ChatJson(payload);
+      }
+      const text = await res.text();
+      return { text, raw: text };
+    } catch (err) {
+      const canFallback =
+        options?.fallbackToV1 !== false &&
+        err instanceof CodeFundiApiError &&
+        [404, 405, 501].includes(err.statusCode);
+      if (!canFallback) throw err;
+
+      const legacy = await this.chat({
+        prompt: req.prompt,
+        model: req.model,
+        conversation: req.conversation_id,
+        context: req.context,
+      });
+      return {
+        text: legacy.response || "",
+        model: legacy.model,
+        raw: legacy,
+      };
+    }
   }
 
   // ==== V1 Chat & Models (OpenAPI: AI Chat; server body uses `question`, not `prompt`) ====

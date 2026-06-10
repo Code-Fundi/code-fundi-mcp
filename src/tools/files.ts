@@ -41,8 +41,8 @@ export function registerFileTools(server: FastMCP): void {
     parameters: z.object({
       repo_key: z.string().describe("Repository UUID or clone URL"),
       file_id: z.string().describe("File UUID (from code-fundi-list-files results)"),
-      fields: z.enum(["basic", "summary", "full"]).optional().describe(
-        "Field preset (default: full).",
+      fields: z.string().optional().describe(
+        "Documentation field preset or custom field path list (basic|summary|full|raw or comma-separated paths).",
       ),
     }),
     annotations: { title: "File Documentation", readOnlyHint: true },

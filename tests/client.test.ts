@@ -3,7 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { CodeFundiClient, CodeFundiApiError } from "../src/client.js";
+import {
+  CODEFUNDI_DEFAULT_CHAT_MODEL_ID,
+  CodeFundiClient,
+  CodeFundiApiError,
+} from "../src/client.js";
 
 describe("CodeFundiClient", () => {
   let client: CodeFundiClient;
@@ -200,6 +204,89 @@ describe("CodeFundiClient", () => {
       vi.unstubAllGlobals();
     });
 
+    it("should POST /v2/chat and parse JSON response", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({
+          status: "success",
+          data: {
+            response: "Hello from v2",
+            model: "gpt-4o-mini",
+            conversation_id: "conv_123",
+          },
+        }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const res = await client.chatV2({ prompt: "Hello v2" });
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("https://api.test.codefundi.app/v2/chat");
+      expect(options.method).toBe("POST");
+      const body = JSON.parse(options.body as string);
+      expect(body.prompt).toBe("Hello v2");
+      expect(body.model).toBe(CODEFUNDI_DEFAULT_CHAT_MODEL_ID);
+      expect(res.text).toBe("Hello from v2");
+      expect(res.model).toBe("gpt-4o-mini");
+      expect(res.conversationId).toBe("conv_123");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("should parse NDJSON response from /v2/chat", async () => {
+      const lines = [
+        JSON.stringify({ type: "chunk", text: "Hello " }),
+        JSON.stringify({ type: "chunk", text: "world" }),
+        JSON.stringify({ type: "done", model: "gpt-4.1", context_files: 0 }),
+      ].join("\n") + "\n";
+      const encoder = new TextEncoder();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-type": "application/x-ndjson" }),
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(lines));
+            controller.close();
+          },
+        }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const res = await client.chatV2({ prompt: "stream me" });
+
+      expect(res.text).toBe("Hello world");
+      expect(res.model).toBe("gpt-4.1");
+      expect(res.contextFiles).toBe(0);
+      vi.unstubAllGlobals();
+    });
+
+    it("should fallback to v1 chat when /v2/chat is unavailable", async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: async () => ({ status: "error", message: "not found" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+          text: async () => "legacy fallback response",
+        });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const res = await client.chatV2({ prompt: "fallback please" });
+
+      expect(res.text).toBe("legacy fallback response");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[0][0]).toBe("https://api.test.codefundi.app/v2/chat");
+      expect(mockFetch.mock.calls[1][0]).toBe("https://api.test.codefundi.app/v1/fundi/chat");
+
+      vi.unstubAllGlobals();
+    });
+
     it("should DELETE /v2/keys/{id}", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -274,6 +361,30 @@ describe("CodeFundiClient", () => {
 
       const [, options] = mockFetch.mock.calls[0];
       expect(options.headers["X-API-Key"]).toBeUndefined();
+
+      vi.unstubAllGlobals();
+    });
+
+    it("auth authenticate should apply optional auth headers", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ status: "ok", data: { user_id: "u1", email: "a@b.com", session: null, verification_required: true, api_key: null } }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await client.authAuthenticate(
+        { email: "a@b.com", auth_mode: "password", authPassword: "pw123" },
+        {
+          idempotencyKey: "idem-1",
+          fingerprint: "fp-1",
+          passwordHeader: "x-auth-password",
+        },
+      );
+
+      const [, options] = mockFetch.mock.calls[0];
+      expect(options.headers["Idempotency-Key"]).toBe("idem-1");
+      expect(options.headers["X-Fingerprint"]).toBe("fp-1");
+      expect(options.headers["X-Auth-Password"]).toBe("pw123");
 
       vi.unstubAllGlobals();
     });

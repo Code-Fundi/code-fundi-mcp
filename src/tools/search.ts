@@ -23,8 +23,8 @@ export function registerSearchTools(server: FastMCP): void {
       scan_mode: z.enum(["semantic", "grep_docs", "grep_code"]).optional().describe("Search mode (default: semantic)"),
       repo_ids: z.array(z.string()).optional().describe("Filter by repository UUIDs"),
       repo_urls: z.array(z.string()).optional().describe("Filter by repository clone URLs"),
-      fields: z.enum(["basic", "summary", "full"]).optional().describe(
-        "Documentation detail level per result (default: full).",
+      fields: z.string().optional().describe(
+        "Documentation field preset or custom field path list (basic|summary|full|raw or comma-separated paths).",
       ),
       similarity_threshold: z.number().min(0).max(1).optional().describe("Minimum similarity score (0-1)"),
       file_types: z.array(z.string()).optional().describe("Filter by file extensions (e.g. ['.ts', '.py'])"),
@@ -79,7 +79,9 @@ export function registerSearchTools(server: FastMCP): void {
       model: z.string().optional().describe("AI model to use for analysis"),
       repo_ids: z.array(z.string()).optional().describe("Filter by repository UUIDs"),
       repo_urls: z.array(z.string()).optional().describe("Filter by repository clone URLs"),
-      fields: z.enum(["basic", "summary", "full"]).optional().describe("Documentation detail level"),
+      fields: z.string().optional().describe(
+        "Documentation field preset or custom field path list (basic|summary|full|raw or comma-separated paths).",
+      ),
       dependencies: z.array(z.string()).optional().describe("Filter by dependencies in code summaries"),
       function_names: z.array(z.string()).optional().describe("Filter by function names"),
       has_functions: z.boolean().optional().describe("Only files with functions"),

@@ -9,7 +9,7 @@ import {
   formatFileList, formatFileDocumentation, formatHistoryList,
   formatHistoryDetail, formatConversation,
   formatUsageStats, formatActivityStats, formatLanguageStats,
-  formatApiKeys, formatModels, formatError,
+  formatApiKeys, formatModels, formatError, formatV2ChatResult,
 } from "../src/formatters.js";
 import { CodeFundiApiError } from "../src/client.js";
 import type {
@@ -77,6 +77,28 @@ describe("formatResearchResult", () => {
   it("should handle empty research result", () => {
     const result = formatResearchResult({ text: "", searchResults: [] });
     expect(result).toBe("");
+  });
+});
+
+describe("formatV2ChatResult", () => {
+  it("should format text/model/conversation metadata", () => {
+    const result = formatV2ChatResult({
+      text: "Primary answer",
+      model: "gpt-4.1",
+      conversationId: "conv_1",
+      contextFiles: 3,
+      searchResults: [{ id: "1" } as SearchResult],
+    });
+    expect(result).toContain("Primary answer");
+    expect(result).toContain("gpt-4.1");
+    expect(result).toContain("conv_1");
+    expect(result).toContain("Context files: 3");
+    expect(result).toContain("Context sources: 1");
+  });
+
+  it("should handle empty text responses", () => {
+    const result = formatV2ChatResult({ text: "   " });
+    expect(result).toContain("No response generated");
   });
 });
 

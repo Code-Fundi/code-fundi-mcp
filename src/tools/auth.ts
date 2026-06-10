@@ -25,6 +25,11 @@ export function registerAuthTools(server: FastMCP): void {
       auth_mode: z.enum(["otp", "password"]).describe("Authentication mode: 'otp' for email code, 'password' for password-based"),
       should_create_user: z.boolean().optional().describe("Set to true for new user registration (default: false)"),
       password: z.string().optional().describe("Password (only used when auth_mode is 'password')"),
+      idempotency_key: z.string().optional().describe("Optional Idempotency-Key header value"),
+      fingerprint: z.string().optional().describe("Optional X-Fingerprint header for rate-limit identity pairing"),
+      password_header: z.enum(["x-codefundi-auth-password", "x-auth-password"]).optional().describe(
+        "Header to carry password when auth_mode=password (default: x-codefundi-auth-password)",
+      ),
     }),
     annotations: { title: "Authenticate", readOnlyHint: false, openWorldHint: true },
     execute: async (args) => {
@@ -35,6 +40,10 @@ export function registerAuthTools(server: FastMCP): void {
           auth_mode: args.auth_mode,
           should_create_user: args.should_create_user,
           authPassword: args.password,
+        }, {
+          idempotencyKey: args.idempotency_key,
+          fingerprint: args.fingerprint,
+          passwordHeader: args.password_header,
         });
 
         const d = res.data;
@@ -76,12 +85,16 @@ export function registerAuthTools(server: FastMCP): void {
     parameters: z.object({
       email: z.string().email().describe("Email address used in the authenticate step"),
       token: z.string().min(6).max(6).describe("6-digit OTP verification code"),
+      fingerprint: z.string().optional().describe("Optional X-Fingerprint header for rate-limit identity pairing"),
     }),
     annotations: { title: "Verify OTP", readOnlyHint: false },
     execute: async (args) => {
       try {
         const client = getClient();
-        const res = await client.authVerify({ email: args.email, token: args.token });
+        const res = await client.authVerify(
+          { email: args.email, token: args.token },
+          { fingerprint: args.fingerprint },
+        );
         const d = res.data;
 
         const parts: string[] = [];
@@ -112,12 +125,16 @@ export function registerAuthTools(server: FastMCP): void {
     parameters: z.object({
       email: z.string().email().describe("Email address to resend the code to"),
       type: z.enum(["signup", "email_change", "email"]).optional().describe("Resend type (default: signup)"),
+      fingerprint: z.string().optional().describe("Optional X-Fingerprint header for rate-limit identity pairing"),
     }),
     annotations: { title: "Resend OTP", readOnlyHint: false },
     execute: async (args) => {
       try {
         const client = getClient();
-        await client.authResend({ email: args.email, type: args.type });
+        await client.authResend(
+          { email: args.email, type: args.type },
+          { fingerprint: args.fingerprint },
+        );
         return `📧 Verification code resent to **${args.email}**. Use \`code-fundi-auth-verify\` with the new code.`;
       } catch (err) { return formatError(err); }
     },
