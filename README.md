@@ -33,6 +33,75 @@ A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.i
 
 Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod](https://zod.dev) for schema validation.
 
+## Getting started for AI agents
+
+If you are an AI agent (or configuring one) and **no `CODEFUNDI_API_KEY` is set**, you must self-authenticate before using search, repos, chat, or other authenticated tools. The auth tools (`code-fundi-auth-*`) work without a pre-existing key.
+
+### Which path to use
+
+| Situation | Action |
+|-----------|--------|
+| `CODEFUNDI_API_KEY` is set in MCP config | Use any tool immediately — the server sends it as `X-API-Key` on every request |
+| No API key configured | Run the **OTP self-auth flow** below (recommended) or **password sign-in** |
+
+### Zero-config MCP setup (no API key)
+
+You can start the MCP server without `CODEFUNDI_API_KEY` and authenticate at runtime:
+
+```json
+{
+  "mcpServers": {
+    "code-fundi": {
+      "command": "npx",
+      "args": ["-y", "@codefundi/code-fundi-mcp"]
+    }
+  }
+}
+```
+
+### Self-authenticate with OTP (recommended)
+
+Code-Fundi uses Supabase-backed auth (`POST /v2/auth/authenticate`, `/v2/auth/verify`, `/v2/auth/resend`). OTP emails contain a **6-digit code** — magic links are not supported on this path.
+
+1. **Ask the human user for their email address.**
+2. Call **`code-fundi-auth-authenticate`** with:
+   - `auth_mode`: `"otp"`
+   - `email`: the user's email
+   - `should_create_user`: `true` for a **new** account, `false` for a **returning** user
+3. Tell the user to check their inbox for a 6-digit code. The API may return `verification_required: true` and `api_key.key_state: "agent_pending"` until verification completes.
+4. **Ask the user for the 6-digit OTP** (human-in-the-loop — you cannot guess or bypass this step).
+5. Call **`code-fundi-auth-verify`** with the same `email` and the `token` (6 digits).
+6. On success, the MCP server **automatically configures the API key in memory** for all subsequent tool calls in this session.
+
+If the code expired or was not received, call **`code-fundi-auth-resend`** with the same `email`, then repeat step 5.
+
+**Example dialogue:**
+
+```
+Agent: What email should I use to sign in to Code-Fundi?
+User:  dev@example.com
+Agent: [calls code-fundi-auth-authenticate] I've sent a 6-digit code to dev@example.com. Please paste it here.
+User:  482913
+Agent: [calls code-fundi-auth-verify] You're signed in. I can now search and index your repositories.
+```
+
+### Password sign-in (alternative)
+
+For existing accounts with a password, call **`code-fundi-auth-authenticate`** with `auth_mode: "password"`, the user's `email`, `should_create_user: false`, and the `password` parameter. The MCP client sends the password only in the `X-CodeFundi-Auth-Password` header (never in the JSON body). Production requires HTTPS. Returning users may receive an active API key immediately without a separate verify step.
+
+### After authentication
+
+- The API key is held **in memory** for the lifetime of the MCP server process. It is **not** persisted across IDE or MCP restarts.
+- Recommend the user add the key to their MCP config as `CODEFUNDI_API_KEY` so future sessions start authenticated.
+- A FREE-tier account and API key are created automatically on first signup.
+
+### Errors
+
+| HTTP status | What to do |
+|-------------|------------|
+| **401** Unauthorized | No valid key — run the OTP flow above, or set `CODEFUNDI_API_KEY` |
+| **429** Too many requests | Auth endpoints are rate-limited per IP; wait for `Retry-After` seconds, then retry |
+
 ## Features
 
 Every tool below is backed by the same codebase map: structural dependencies, call graph, and blast radius, indexed once and queried in milliseconds.
@@ -73,13 +142,26 @@ npm run build
 
 ### Configure
 
-Set your API key as an environment variable:
+**Option A — API key (fastest):** set your key as an environment variable:
 
 ```bash
 export CODEFUNDI_API_KEY=your_api_key_here
 ```
 
-Or skip this step, agents can authenticate dynamically using the `code-fundi-auth-*` tools.
+**Option B — no API key:** skip the env var and let the agent self-authenticate at runtime. See [Getting started for AI agents](#getting-started-for-ai-agents).
+
+Zero-config MCP example (no `env` block):
+
+```json
+{
+  "mcpServers": {
+    "code-fundi": {
+      "command": "npx",
+      "args": ["-y", "@codefundi/code-fundi-mcp"]
+    }
+  }
+}
+```
 
 ### Use with Claude Desktop
 
@@ -218,22 +300,7 @@ Covers the Code-Fundi **V2** API for codebase mapping and blast-radius analysis:
 
 ## Authentication
 
-The server supports two authentication modes:
-
-### Pre-configured API Key (Recommended)
-
-Set `CODEFUNDI_API_KEY` in your MCP config environment. All tools work immediately.
-
-### Agent-Driven Auth (Dynamic)
-
-When no API key is set, agents can self-authenticate:
-
-1. Call `code-fundi-auth-authenticate` with email and `auth_mode: "otp"`
-2. User receives an OTP code via email
-3. Call `code-fundi-auth-verify` with the 6-digit code
-4. API key is automatically configured, all tools now work
-
-This enables fully autonomous agent setup without manual configuration.
+Two modes: **pre-configured API key** (`CODEFUNDI_API_KEY` in MCP config) or **agent-driven OTP/password auth** at runtime. Full step-by-step instructions, tool names, and error handling are in [Getting started for AI agents](#getting-started-for-ai-agents) at the top of this README.
 
 ## Environment Variables
 
