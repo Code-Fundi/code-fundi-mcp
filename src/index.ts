@@ -14,6 +14,7 @@ import { FastMCP } from "fastmcp";
 
 import { registerSearchTools } from "./tools/search.js";
 import { registerRepoTools } from "./tools/repos.js";
+import { registerRepoIntelTools } from "./tools/intel.js";
 import { registerFileTools } from "./tools/files.js";
 import { registerHistoryTools } from "./tools/history.js";
 import { registerStatsTools } from "./tools/stats.js";
@@ -28,6 +29,7 @@ const server = new FastMCP({
 // Register all tool groups
 registerSearchTools(server);
 registerRepoTools(server);
+registerRepoIntelTools(server);
 registerFileTools(server);
 registerHistoryTools(server);
 registerStatsTools(server);

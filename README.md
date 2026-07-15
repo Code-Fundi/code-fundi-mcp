@@ -37,11 +37,12 @@ Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod]
 
 - 🔍 **Semantic & grep code search** across indexed repositories
 - 🧠 **AI-powered research** — search + AI analysis in a single call
-- 📦 **Repository management** — index, status, README, listing
+- 📦 **Repository management** — index, status, README, listing, public catalog
+- 🛰️ **Repository intelligence** — scope (dependencies/functions/variables), cross-repo dependency map, blueprint, blast radius, code review, and test-gap analysis
 - 📄 **File documentation** — AI-generated docs for any indexed file
 - 📊 **Usage statistics** — query usage, activity, language breakdowns
 - 🔐 **Agent-driven authentication** — sign up/sign in via OTP without pre-configured keys
-- 💬 **AI chat** — direct conversation with Code-Fundi AI
+- 💬 **AI chat & model insight** — direct conversation with Code-Fundi AI, model catalog, and per-tier limits
 
 ## Quick Start
 
@@ -139,9 +140,9 @@ npx fastmcp inspect src/index.ts    # Open MCP Inspector UI
 npx fastmcp dev src/index.ts        # Test with MCP CLI
 ```
 
-## Tools Reference (22 tools)
+## Tools Reference (30 tools)
 
-Covers the Code-Fundi **V2** API: search (including search-with-chat / research), repositories (list, index, status, readme), files, history, statistics, API keys, authentication, plus **Fundi chat** and the model catalog (`POST /v1/fundi/chat`, `GET /v1/fundi/models` — there is no separate `/v2/chat` in the published OpenAPI).
+Covers the Code-Fundi **V2** API: search (including search-with-chat / research), repositories (list, index, status, readme, public catalog), repository intelligence (scope, map, blueprint, radius, review, test-gaps), files, history, statistics, API keys, authentication, plus **Fundi chat** (`POST /v1/fundi/chat`) and the V2 model catalog / limits (`GET /v2/models`, `GET /v2/models/limits`).
 
 ### Search
 
@@ -157,7 +158,19 @@ Covers the Code-Fundi **V2** API: search (including search-with-chat / research)
 | `code-fundi-list-repos` | List indexed repositories with pagination |
 | `code-fundi-index-repo` | Index a new GitHub repository |
 | `code-fundi-repo-status` | Check repository indexing status |
-| `code-fundi-repo-readme` | Get repository README documentation |
+| `code-fundi-repo-readme` | Get repository README documentation (deprecated — prefer blueprint) |
+| `code-fundi-list-public-repos` | Browse the global catalog of indexed public repositories (no key needed) |
+
+### Repository Intelligence
+
+| Tool | Description |
+|------|-------------|
+| `code-fundi-repo-scope` | Aggregated dependencies, functions, and variables (with drill-down and cross-repo comparison) |
+| `code-fundi-repo-map` | Cross-repository dependency map |
+| `code-fundi-repo-blueprint` | README + dependency/convention overview (successor to repo-readme) |
+| `code-fundi-repo-radius` | Blast radius / file impact analysis (PRO+) |
+| `code-fundi-repo-review` | Per-file code review signals: verdict, risk, complexity, coverage, debt (PRO+) |
+| `code-fundi-repo-test-gaps` | Test coverage gap analysis with suggested test cases (PRO+) |
 
 ### Files
 
@@ -198,7 +211,8 @@ Covers the Code-Fundi **V2** API: search (including search-with-chat / research)
 | Tool | Description |
 |------|-------------|
 | `code-fundi-chat` | Fundi AI chat (`POST /v1/fundi/chat`; streamed responses are collected to text) |
-| `code-fundi-list-models` | List available AI models |
+| `code-fundi-list-models` | List the curated chat model catalog (`GET /v2/models`) |
+| `code-fundi-model-limits` | Get AI model limits and tier configuration (`GET /v2/models/limits`) |
 
 ## Authentication
 
