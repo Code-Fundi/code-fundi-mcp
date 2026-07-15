@@ -1,6 +1,6 @@
 <p align="center">
  <h2 align="center"><b>Code Fundi</b></h2>
- <p align="center">The Codebase Context Layer for Agents, Teams and Applications.</p>
+ <p align="center">The Codebase Map for AI Agents, Teams and Applications.</p>
 </p>
 </p>
 <p align="center">
@@ -29,20 +29,22 @@
 
 # Code-Fundi MCP Server
 
-A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the [Code-Fundi](https://api.codefundi.app) API. Enables any MCP-compatible AI assistant — Claude, Cursor, Windsurf, VS Code Copilot, and more — to search, research, index, and scan code repositories through natural language.
+A production-grade [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the [Code-Fundi](https://api.codefundi.app) API: a codebase map and blast-radius engine for AI coding agents. Enables any MCP-compatible AI assistant (Claude, Claude Code, Cursor, Windsurf, VS Code Copilot, and more) to search, research, index, and scan code repositories through natural language, and see what a change breaks before it ships.
 
 Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod](https://zod.dev) for schema validation.
 
 ## Features
 
-- 🔍 **Semantic & grep code search** across indexed repositories
-- 🧠 **AI-powered research** — search + AI analysis in a single call
-- 📦 **Repository management** — index, status, README, listing, public catalog
-- 🛰️ **Repository intelligence** — scope (dependencies/functions/variables), cross-repo dependency map, blueprint, blast radius, code review, and test-gap analysis
-- 📄 **File documentation** — AI-generated docs for any indexed file
-- 📊 **Usage statistics** — query usage, activity, language breakdowns
-- 🔐 **Agent-driven authentication** — sign up/sign in via OTP without pre-configured keys
-- 💬 **AI chat & model insight** — direct conversation with Code-Fundi AI, model catalog, and per-tier limits
+Every tool below is backed by the same codebase map: structural dependencies, call graph, and blast radius, indexed once and queried in milliseconds.
+
+- 🔍 **Semantic & grep code search** across your indexed codebase map
+- 🧠 **AI-powered research**: search plus AI analysis in a single call
+- 📦 **Repository management**: index, status, README, listing, public catalog
+- 🛰️ **Repository intelligence**: scope (dependencies/functions/variables), cross-repo dependency map, blueprint, Blast-Radius Guard (impact analysis before you merge), code review, and test-gap analysis
+- 📄 **File documentation**: AI-generated docs for any indexed file
+- 📊 **Usage statistics**: query usage, activity, language breakdowns
+- 🔐 **Agent-driven authentication**: sign up/sign in via OTP without pre-configured keys
+- 💬 **AI chat & model insight**: direct conversation with Code-Fundi AI, model catalog, and per-tier limits
 
 ## Quick Start
 
@@ -77,11 +79,11 @@ Set your API key as an environment variable:
 export CODEFUNDI_API_KEY=your_api_key_here
 ```
 
-Or skip this step — agents can authenticate dynamically using the `code-fundi-auth-*` tools.
+Or skip this step, agents can authenticate dynamically using the `code-fundi-auth-*` tools.
 
 ### Use with Claude Desktop
 
-After a global install (`npm i -g @codefundi/code-fundi-mcp`), point MCP at the published binary — **no path to `dist/index.js` required**:
+After a global install (`npm i -g @codefundi/code-fundi-mcp`), point MCP at the published binary (no path to `dist/index.js` required):
 
 ```json
 {
@@ -114,7 +116,7 @@ If the binary is not on your `PATH`, use `npx` (downloads or uses the local pack
 
 ### Use with Cursor
 
-Same pattern as Claude — `command` + optional `args` only; no manual path to the repo:
+Same pattern as Claude: `command` plus optional `args` only, no manual path to the repo:
 
 ```json
 {
@@ -142,33 +144,33 @@ npx fastmcp dev src/index.ts        # Test with MCP CLI
 
 ## Tools Reference (30 tools)
 
-Covers the Code-Fundi **V2** API: search (including search-with-chat / research), repositories (list, index, status, readme, public catalog), repository intelligence (scope, map, blueprint, radius, review, test-gaps), files, history, statistics, API keys, authentication, plus **Fundi chat** (`POST /v1/fundi/chat`) and the V2 model catalog / limits (`GET /v2/models`, `GET /v2/models/limits`).
+Covers the Code-Fundi **V2** API for codebase mapping and blast-radius analysis: search (including search-with-chat / research), repositories (list, index, status, readme, public catalog), repository intelligence (scope, map, blueprint, radius, review, test-gaps), files, history, statistics, API keys, authentication, plus **Fundi chat** (`POST /v1/fundi/chat`) and the V2 model catalog / limits (`GET /v2/models`, `GET /v2/models/limits`).
 
 ### Search
 
 | Tool | Description |
 |------|-------------|
-| `code-fundi-search` | Semantic/grep search across repositories with filters |
-| `code-fundi-research` | Search + AI-synthesized analysis of matching code |
+| `code-fundi-search` | Semantic and grep search across your indexed codebase map, with filters |
+| `code-fundi-research` | Search plus AI-synthesized analysis of matching code |
 
 ### Repositories
 
 | Tool | Description |
 |------|-------------|
 | `code-fundi-list-repos` | List indexed repositories with pagination |
-| `code-fundi-index-repo` | Index a new GitHub repository |
+| `code-fundi-index-repo` | Index a new GitHub repository into your codebase map |
 | `code-fundi-repo-status` | Check repository indexing status |
-| `code-fundi-repo-readme` | Get repository README documentation (deprecated — prefer blueprint) |
+| `code-fundi-repo-readme` | Get repository README documentation (deprecated, prefer blueprint) |
 | `code-fundi-list-public-repos` | Browse the global catalog of indexed public repositories (no key needed) |
 
 ### Repository Intelligence
 
 | Tool | Description |
 |------|-------------|
-| `code-fundi-repo-scope` | Aggregated dependencies, functions, and variables (with drill-down and cross-repo comparison) |
-| `code-fundi-repo-map` | Cross-repository dependency map |
-| `code-fundi-repo-blueprint` | README + dependency/convention overview (successor to repo-readme) |
-| `code-fundi-repo-radius` | Blast radius / file impact analysis (PRO+) |
+| `code-fundi-repo-scope` | Aggregated dependencies, functions, and variables across the codebase map (with drill-down and cross-repo comparison) |
+| `code-fundi-repo-map` | Cross-repository dependency map: how services and packages actually connect |
+| `code-fundi-repo-blueprint` | README plus dependency and convention overview (successor to repo-readme) |
+| `code-fundi-repo-radius` | Blast-Radius Guard: every file and function that breaks before you merge (PRO+) |
 | `code-fundi-repo-review` | Per-file code review signals: verdict, risk, complexity, coverage, debt (PRO+) |
 | `code-fundi-repo-test-gaps` | Test coverage gap analysis with suggested test cases (PRO+) |
 
@@ -229,7 +231,7 @@ When no API key is set, agents can self-authenticate:
 1. Call `code-fundi-auth-authenticate` with email and `auth_mode: "otp"`
 2. User receives an OTP code via email
 3. Call `code-fundi-auth-verify` with the 6-digit code
-4. API key is automatically configured — all tools now work
+4. API key is automatically configured, all tools now work
 
 This enables fully autonomous agent setup without manual configuration.
 
