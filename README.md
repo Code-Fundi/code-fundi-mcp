@@ -51,13 +51,13 @@ Built with [FastMCP](https://github.com/punkpeye/fastmcp) (TypeScript) and [Zod]
 Install the package (includes a pre-built `dist/`). The `code-fundi-mcp` binary is on your `PATH` when installed globally, or available via `npx` without cloning the repo:
 
 ```bash
-npm install -g code-fundi-mcp
+npm install -g @codefundi/code-fundi-mcp
 ```
 
 Or add it to a project:
 
 ```bash
-npm install code-fundi-mcp
+npm install @codefundi/code-fundi-mcp
 ```
 
 ### Install from source (this repository)
@@ -81,13 +81,13 @@ Or skip this step — agents can authenticate dynamically using the `code-fundi-
 
 ### Use with Claude Desktop
 
-After a global install (`npm i -g code-fundi-mcp`), point MCP at the published binary — **no path to `dist/index.js` required**:
+After a global install (`npm i -g @codefundi/code-fundi-mcp`), point MCP at the published binary — **no path to `dist/index.js` required**:
 
 ```json
 {
   "mcpServers": {
     "code-fundi": {
-      "command": "code-fundi-mcp",
+      "command": "@codefundi/code-fundi-mcp",
       "env": {
         "CODEFUNDI_API_KEY": "your_api_key_here"
       }
@@ -103,7 +103,7 @@ If the binary is not on your `PATH`, use `npx` (downloads or uses the local pack
   "mcpServers": {
     "code-fundi": {
       "command": "npx",
-      "args": ["-y", "code-fundi-mcp"],
+      "args": ["-y", "@codefundi/code-fundi-mcp"],
       "env": {
         "CODEFUNDI_API_KEY": "your_api_key_here"
       }
@@ -121,7 +121,7 @@ Same pattern as Claude — `command` + optional `args` only; no manual path to t
   "mcpServers": {
     "code-fundi": {
       "command": "npx",
-      "args": ["-y", "code-fundi-mcp"],
+      "args": ["-y", "@codefundi/code-fundi-mcp"],
       "env": {
         "CODEFUNDI_API_KEY": "your_api_key_here"
       }

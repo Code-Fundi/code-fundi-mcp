@@ -1,6 +1,6 @@
 {
   "name": "@codefundi/code-fundi-mcp",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "MCP server for CodeFundi: the codebase map and blast-radius guard for AI coding agents like Claude Code, Cursor, and Copilot.",
   "keywords": [
     "mcp",
@@ -36,6 +36,12 @@
   "author": "Code Fundi <hi@codefundi.app>",
   "type": "module",
   "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Code-Fundi/code-fundi-mcp"
+  },
+  "homepage": "https://codefundi.app",
+  "author": "Code Fundi",
   "bin": {
     "code-fundi-mcp": "dist/index.js"
   },
