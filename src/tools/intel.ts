@@ -1,56 +1,18 @@
 /**
  * Code-Fundi MCP — Repository Intelligence Tools
  *
- * Advanced V2 repository intelligence endpoints:
- *   - scope      (POST /v2/repos/{repo_id}/scope)      dependencies / functions / variables
- *   - map        (GET  /v2/repos/{repo_id}/map)        cross-repository dependency map
- *   - blueprint  (GET  /v2/repos/{repo_id}/blueprint)  README + dependency overview
- *   - radius     (POST /v2/repos/{repo_id}/radius)     blast radius / file impact analysis
- *   - review     (GET  /v2/repos/{repo_id}/review)     code review signals (PRO+)
- *   - test-gaps  (GET  /v2/repos/{repo_id}/test-gaps)  test coverage gap analysis (PRO+)
- *
- * These endpoints consume credits and several require PRO tier or higher.
+ * V2 repository intelligence: dependency map, blueprint, blast radius.
  */
 
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
 import {
-  formatRepoScope, formatRepoMap, formatRepoBlueprint,
-  formatRepoRadius, formatRepoReview, formatRepoTestGaps, formatError,
+  formatRepoMap, formatRepoBlueprint,
+  formatRepoRadius, formatError,
 } from "../formatters.js";
 
 export function registerRepoIntelTools(server: FastMCP): void {
-  server.addTool({
-    name: "code-fundi-repo-scope",
-    description:
-      "Get aggregated dependencies, functions, and/or variable names for a repository in a single call. " +
-      "Use `include` to restrict kinds (default: all three). Provide `name` (plus `expand`) to drill into a " +
-      "single dependency's files/functions, or `compare_repos` (up to 25 UUIDs) to compare dependencies across repos. " +
-      "Consumes credits; functions/variables may be tier-gated.",
-    parameters: z.object({
-      repo_key: z.string().describe("Repository UUID or clone URL"),
-      include: z.array(z.enum(["dependencies", "functions", "variables"])).optional().describe("Kinds to return (default: all three)"),
-      name: z.string().optional().describe("Exact name filter (dependency key or symbol name)"),
-      type: z.string().optional().describe("Type/role filter (dependency type, function type, or variable role)"),
-      expand: z.array(z.enum(["files", "functions"])).optional().describe("Drill-down expansions; requires `name`"),
-      compare_repos: z.array(z.string()).optional().describe("Up to 25 repository UUIDs for dependency comparison"),
-      limit: z.number().int().min(1).max(200).optional().describe("Max items per kind (default 50)"),
-      offset: z.number().int().min(0).optional().describe("Pagination offset"),
-      order: z.enum(["usage", "name"]).optional().describe("Ordering (default: usage)"),
-      demo: z.boolean().optional().describe("Run in demo mode (pre-signup, public data, IP-based credits)"),
-    }),
-    annotations: { title: "Repository Scope", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
-      try {
-        const client = getClient();
-        const { repo_key, demo, ...body } = args;
-        const res = await client.getRepoScope(repo_key, body, demo);
-        return res.data ? formatRepoScope(res.data, res.pagination, res.meta?.gated_kinds) : "No scope data available.";
-      } catch (err) { return formatError(err); }
-    },
-  });
-
   server.addTool({
     name: "code-fundi-repo-map",
     description:
@@ -125,58 +87,6 @@ export function registerRepoIntelTools(server: FastMCP): void {
         const { repo_key, demo, ...body } = args;
         const res = await client.getRepoRadius(repo_key, body, demo);
         return res.data ? formatRepoRadius(res.data) : "No blast radius data available.";
-      } catch (err) { return formatError(err); }
-    },
-  });
-
-  server.addTool({
-    name: "code-fundi-repo-review",
-    description:
-      "Get code review signals per file: verdict (pass/warn/block), risk score, complexity, duplication, " +
-      "estimated coverage, and technical debt. Requires PRO tier or higher and consumes credits.",
-    parameters: z.object({
-      repo_key: z.string().describe("Repository UUID or clone URL"),
-      verdict: z.array(z.enum(["pass", "warn", "block"])).optional().describe("Filter by verdict(s)"),
-      order: z.enum(["risk", "complexity", "coverage", "debt"]).optional().describe("Sort order (default: risk)"),
-      limit: z.number().int().min(1).optional().describe("Max files (default 50)"),
-      offset: z.number().int().min(0).optional().describe("Pagination offset"),
-      demo: z.boolean().optional().describe("Run in demo mode (pre-signup, public data, IP-based credits)"),
-    }),
-    annotations: { title: "Repository Code Review", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
-      try {
-        const client = getClient();
-        const { repo_key, verdict, ...rest } = args;
-        const res = await client.getRepoReview(repo_key, {
-          ...rest,
-          verdict: verdict?.length ? verdict.join(",") : undefined,
-        });
-        return res.data ? formatRepoReview(res.data) : "No review signals available.";
-      } catch (err) { return formatError(err); }
-    },
-  });
-
-  server.addTool({
-    name: "code-fundi-repo-test-gaps",
-    description:
-      "Analyze test coverage gaps: per-file risk score, estimated coverage, suggested test cases, mockable " +
-      "dependencies, and reasons code is hard to test. Requires PRO tier or higher and consumes credits.",
-    parameters: z.object({
-      repo_key: z.string().describe("Repository UUID or clone URL"),
-      priority: z.enum(["high", "medium", "low"]).optional().describe("Filter by gap priority"),
-      min_risk: z.number().min(0).max(1).optional().describe("Minimum risk score (0-1)"),
-      untested_only: z.boolean().optional().describe("Only return untested files (default true)"),
-      limit: z.number().int().min(1).optional().describe("Max gaps (default 50)"),
-      offset: z.number().int().min(0).optional().describe("Pagination offset"),
-      demo: z.boolean().optional().describe("Run in demo mode (pre-signup, public data, IP-based credits)"),
-    }),
-    annotations: { title: "Repository Test Gaps", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
-      try {
-        const client = getClient();
-        const { repo_key, ...opts } = args;
-        const res = await client.getRepoTestGaps(repo_key, opts);
-        return res.data ? formatRepoTestGaps(res.data) : "No test gap data available.";
       } catch (err) { return formatError(err); }
     },
   });

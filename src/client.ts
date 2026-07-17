@@ -18,10 +18,9 @@ import type {
   ChatRequest, ChatResponse, ModelsResponse, V2ModelsListResponse,
   ModelLimitsResponse, SearchFieldsParam,
   SortOrder, StatsRange, RepoScope, HistoryCategory, ErrorResponse,
-  PublicRepoListResponse, RepoScopeRequest, RepoScopeResponse,
+  PublicRepoListResponse,
   RepoMapOptions, RepoMapResponse, RepoBlueprintResponse,
-  RepoRadiusRequest, RepoRadiusResponse, RepoReviewResponse, RepoReviewOrder,
-  RepoTestGapsResponse, TestGapPriority,
+  RepoRadiusRequest, RepoRadiusResponse,
 } from "./types.js";
 
 // ============================================================================
@@ -267,15 +266,6 @@ export class CodeFundiClient {
 
   // ==== V2 Repository Intelligence ====
 
-  async getRepoScope(repoKey: string, body: RepoScopeRequest = {}, demo?: boolean): Promise<RepoScopeResponse> {
-    this.requireKeyUnlessDemo(demo);
-    const qs = buildQuery({ demo: demo || undefined });
-    return this.request<RepoScopeResponse>(
-      `/v2/repos/${encodeRepoKey(repoKey)}/scope${qs}`,
-      { method: "POST", body: JSON.stringify(body) },
-    );
-  }
-
   async getRepoMap(repoKey: string, opts: RepoMapOptions = {}): Promise<RepoMapResponse> {
     const { demo, ...rest } = opts;
     this.requireKeyUnlessDemo(demo);
@@ -300,26 +290,6 @@ export class CodeFundiClient {
       `/v2/repos/${encodeRepoKey(repoKey)}/radius${qs}`,
       { method: "POST", body: JSON.stringify(body) },
     );
-  }
-
-  async getRepoReview(
-    repoKey: string,
-    opts: { verdict?: string; order?: RepoReviewOrder; limit?: number; offset?: number; demo?: boolean } = {},
-  ): Promise<RepoReviewResponse> {
-    const { demo, ...rest } = opts;
-    this.requireKeyUnlessDemo(demo);
-    const qs = buildQuery({ ...rest, demo: demo || undefined });
-    return this.request<RepoReviewResponse>(`/v2/repos/${encodeRepoKey(repoKey)}/review${qs}`, { method: "GET" });
-  }
-
-  async getRepoTestGaps(
-    repoKey: string,
-    opts: { priority?: TestGapPriority; min_risk?: number; untested_only?: boolean; limit?: number; offset?: number; demo?: boolean } = {},
-  ): Promise<RepoTestGapsResponse> {
-    const { demo, ...rest } = opts;
-    this.requireKeyUnlessDemo(demo);
-    const qs = buildQuery({ ...rest, demo: demo || undefined });
-    return this.request<RepoTestGapsResponse>(`/v2/repos/${encodeRepoKey(repoKey)}/test-gaps${qs}`, { method: "GET" });
   }
 
   // ==== V2 Files ====

@@ -109,7 +109,7 @@ Every tool below is backed by the same codebase map: structural dependencies, ca
 - 🔍 **Semantic & grep code search** across your indexed codebase map
 - 🧠 **AI-powered research**: search plus AI analysis in a single call
 - 📦 **Repository management**: index, status, README, listing, public catalog
-- 🛰️ **Repository intelligence**: scope (dependencies/functions/variables), cross-repo dependency map, blueprint, Blast-Radius Guard (impact analysis before you merge), code review, and test-gap analysis
+- 🛰️ **Repository intelligence**: cross-repo dependency map, blueprint, Blast-Radius Guard (impact analysis before you merge)
 - 📄 **File documentation**: AI-generated docs for any indexed file
 - 📊 **Usage statistics**: query usage, activity, language breakdowns
 - 🔐 **Agent-driven authentication**: sign up/sign in via OTP without pre-configured keys
@@ -224,9 +224,9 @@ npx fastmcp inspect src/index.ts    # Open MCP Inspector UI
 npx fastmcp dev src/index.ts        # Test with MCP CLI
 ```
 
-## Tools Reference (30 tools)
+## Tools Reference (27 tools)
 
-Covers the Code-Fundi **V2** API for codebase mapping and blast-radius analysis: search (including search-with-chat / research), repositories (list, index, status, readme, public catalog), repository intelligence (scope, map, blueprint, radius, review, test-gaps), files, history, statistics, API keys, authentication, plus **Fundi chat** (`POST /v1/fundi/chat`) and the V2 model catalog / limits (`GET /v2/models`, `GET /v2/models/limits`).
+Covers the Code-Fundi **V2** API for codebase mapping and blast-radius analysis: search (including search-with-chat / research), repositories (list, index, status, readme, public catalog), repository intelligence (map, blueprint, radius), files, history, statistics, API keys, authentication, plus **Fundi chat** (`POST /v1/fundi/chat`) and the V2 model catalog / limits (`GET /v2/models`, `GET /v2/models/limits`).
 
 ### Search
 
@@ -249,12 +249,9 @@ Covers the Code-Fundi **V2** API for codebase mapping and blast-radius analysis:
 
 | Tool | Description |
 |------|-------------|
-| `code-fundi-repo-scope` | Aggregated dependencies, functions, and variables across the codebase map (with drill-down and cross-repo comparison) |
 | `code-fundi-repo-map` | Cross-repository dependency map: how services and packages actually connect |
 | `code-fundi-repo-blueprint` | README plus dependency and convention overview (successor to repo-readme) |
 | `code-fundi-repo-radius` | Blast-Radius Guard: every file and function that breaks before you merge (PRO+) |
-| `code-fundi-repo-review` | Per-file code review signals: verdict, risk, complexity, coverage, debt (PRO+) |
-| `code-fundi-repo-test-gaps` | Test coverage gap analysis with suggested test cases (PRO+) |
 
 ### Files
 

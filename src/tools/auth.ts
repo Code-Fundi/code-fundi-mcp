@@ -16,10 +16,11 @@ export function registerAuthTools(server: FastMCP): void {
   server.addTool({
     name: "code-fundi-auth-authenticate",
     description:
-      "Start a Code-Fundi authentication flow. Supports OTP (email code) or password modes. " +
-      "For new users, set should_create_user to true. " +
-      "After calling this, use code-fundi-auth-verify to complete the sign-in with the OTP code. " +
-      "This tool does NOT require an existing API key.",
+      "Start Code-Fundi authentication (POST /v2/auth/authenticate). No existing API key required. " +
+      "Use auth_mode otp for new or returning users: set should_create_user true on first signup, false on sign-in. " +
+      "Sends a 6-digit email OTP (not a magic link); then call code-fundi-auth-verify after the human user provides the code. " +
+      "Password mode: pass password here (sent as X-CodeFundi-Auth-Password header only); should_create_user false for sign-in. " +
+      "On success with an active key, the API key is configured in-memory for this MCP session only.",
     parameters: z.object({
       email: z.string().email().describe("Email address to authenticate"),
       auth_mode: z.enum(["otp", "password"]).describe("Authentication mode: 'otp' for email code, 'password' for password-based"),
@@ -70,9 +71,10 @@ export function registerAuthTools(server: FastMCP): void {
   server.addTool({
     name: "code-fundi-auth-verify",
     description:
-      "Verify a Code-Fundi OTP code to complete authentication. " +
-      "Use the 6-digit code sent to the email from code-fundi-auth-authenticate. " +
-      "On success, the API key is automatically configured for all subsequent tool calls.",
+      "Complete OTP sign-in (POST /v2/auth/verify). Requires the 6-digit code from the user's email after code-fundi-auth-authenticate. " +
+      "The human user must supply the token — ask them explicitly. " +
+      "On success, activates the API key and configures it in-memory for all subsequent tools in this MCP session. " +
+      "Persist CODEFUNDI_API_KEY in MCP config if the user wants auth to survive restarts.",
     parameters: z.object({
       email: z.string().email().describe("Email address used in the authenticate step"),
       token: z.string().min(6).max(6).describe("6-digit OTP verification code"),
@@ -108,7 +110,9 @@ export function registerAuthTools(server: FastMCP): void {
 
   server.addTool({
     name: "code-fundi-auth-resend",
-    description: "Resend the OTP verification email if the previous one expired or wasn't received.",
+    description:
+      "Resend the OTP email (POST /v2/auth/resend) when the previous code expired or was not received. " +
+      "Use after code-fundi-auth-authenticate, before code-fundi-auth-verify. Default type is signup for new accounts.",
     parameters: z.object({
       email: z.string().email().describe("Email address to resend the code to"),
       type: z.enum(["signup", "email_change", "email"]).optional().describe("Resend type (default: signup)"),

@@ -10,16 +10,15 @@ import {
   formatHistoryDetail, formatConversation,
   formatUsageStats, formatActivityStats, formatLanguageStats,
   formatApiKeys, formatModels, formatModelLimits, formatError,
-  formatPublicRepoList, formatRepoScope, formatRepoMap,
-  formatRepoBlueprint, formatRepoRadius, formatRepoReview,
-  formatRepoTestGaps,
+  formatPublicRepoList, formatRepoMap,
+  formatRepoBlueprint, formatRepoRadius,
 } from "../src/formatters.js";
 import { CodeFundiApiError } from "../src/client.js";
 import type {
   SearchResult, Repository, FileListItem, HistoryItem,
   FileDocumentationData, ReadmeData, RepositoryIndexInitRepo,
-  PublicRepoListItem, RepoScopeData, RepoMapData, RepoBlueprintData,
-  RepoRadiusData, RepoReviewData, RepoTestGapsData, ModelLimitsData,
+  PublicRepoListItem, RepoMapData, RepoBlueprintData,
+  RepoRadiusData, ModelLimitsData,
 } from "../src/types.js";
 
 // ==== Search ====
@@ -274,33 +273,6 @@ describe("formatPublicRepoList", () => {
 
 // ==== Repository Intelligence ====
 
-describe("formatRepoScope", () => {
-  it("should format dependencies, functions, variables and pagination hints", () => {
-    const data: RepoScopeData = {
-      repo: { name: "my-repo" },
-      summary: { total_files: 100, dependency_count: 3, function_count: 2, variable_count: 1 },
-      scope: {
-        dependencies: [{ name: "express", version: "4.18.0", type: "package", usage: { file_count: 10, percentage: 25 } }],
-        functions: [{ name: "handler", type: "function", usage: { file_count: 4 } }],
-        variables: [{ name: "PORT", type: "env" }],
-      },
-    };
-    const result = formatRepoScope(data, { dependencies: { total: 20, limit: 1, offset: 0, has_more: true } }, ["variables"]);
-    expect(result).toContain("my-repo");
-    expect(result).toContain("**express**@4.18.0");
-    expect(result).toContain("used in 10 file(s)");
-    expect(result).toContain("handler");
-    expect(result).toContain("PORT");
-    expect(result).toContain("Gated");
-    expect(result).toContain("More available");
-  });
-
-  it("should handle empty scope", () => {
-    const result = formatRepoScope({ scope: {} });
-    expect(result).toContain("No scope data found");
-  });
-});
-
 describe("formatRepoMap", () => {
   it("should format map dependencies", () => {
     const data: RepoMapData = {
@@ -368,55 +340,6 @@ describe("formatRepoRadius", () => {
   });
 });
 
-describe("formatRepoReview", () => {
-  it("should format the file metrics table", () => {
-    const data: RepoReviewData = {
-      summary: { blockers: 1 },
-      files: [{
-        id: "rf1", file_path: "src/app.ts", verdict: "block", risk_score: 0.9,
-        cyclomatic_complexity: 22, estimated_coverage: null, technical_debt_minutes: 120,
-      }],
-    };
-    const result = formatRepoReview(data);
-    expect(result).toContain("Code Review Signals");
-    expect(result).toContain("src/app.ts");
-    expect(result).toContain("block");
-    expect(result).toContain("N/A");
-    expect(result).toContain("120");
-  });
-
-  it("should handle no files", () => {
-    const result = formatRepoReview({ files: [] });
-    expect(result).toContain("No review signals found");
-  });
-});
-
-describe("formatRepoTestGaps", () => {
-  it("should format gaps with suggested test cases", () => {
-    const data: RepoTestGapsData = {
-      gaps: [{
-        id: "g1", file_path: "src/auth.ts", risk_score: 0.8, estimated_coverage: 0.2,
-        security_risk_level: "high",
-        suggested_test_cases: [{ priority: "high", description: "Test invalid token", target_function: "verify" }],
-        mockable_dependencies: ["jwt"],
-        hard_to_test_reasons: ["network calls"],
-      }],
-    };
-    const result = formatRepoTestGaps(data);
-    expect(result).toContain("Test Coverage Gaps");
-    expect(result).toContain("src/auth.ts");
-    expect(result).toContain("Test invalid token");
-    expect(result).toContain("verify");
-    expect(result).toContain("jwt");
-    expect(result).toContain("network calls");
-  });
-
-  it("should handle no gaps", () => {
-    const result = formatRepoTestGaps({ gaps: [] });
-    expect(result).toContain("No test gaps found");
-  });
-});
-
 // ==== Errors ====
 
 describe("formatError", () => {
@@ -425,6 +348,8 @@ describe("formatError", () => {
     const result = formatError(err);
     expect(result).toContain("401");
     expect(result).toContain("code-fundi-auth-authenticate");
+    expect(result).toContain("CODEFUNDI_API_KEY");
+    expect(result).toContain("persist");
   });
 
   it("should format rate limit error with retry info", () => {

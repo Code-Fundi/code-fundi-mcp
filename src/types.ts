@@ -299,8 +299,7 @@ export interface PublicRepoListResponse extends PaginatedResponse<PublicRepoList
 }
 
 // ============================================================================
-// Repository Intelligence Types
-// (scope, map, blueprint, radius, review, test-gaps)
+// Repository Intelligence Types (map, blueprint, radius)
 // ============================================================================
 
 export type DependencyType = "package" | "import" | "export" | "env";
@@ -324,9 +323,7 @@ export interface DependencyItem {
   symbols?: string[];
   usage?: DependencyUsage;
   comparison?: DependencyComparison;
-  /** Present only when `include=files`; includes Markdown documentation per file. */
   files?: Record<string, unknown>[];
-  /** Present only when `include=functions`; no control_flow fields. */
   functions?: Record<string, unknown>[];
 }
 
@@ -335,59 +332,6 @@ export interface ScopeSymbolItem {
   type?: string;
   usage?: DependencyUsage;
   detail?: Record<string, unknown> | null;
-}
-
-// ---- Scope (`POST /v2/repos/{repo_id}/scope`) ----
-
-export type RepoScopeKind = "dependencies" | "functions" | "variables";
-export type RepoScopeExpand = "files" | "functions";
-export type RepoScopeOrder = "usage" | "name";
-
-export interface RepoScopeRequest {
-  include?: RepoScopeKind[] | string;
-  name?: string;
-  type?: string;
-  expand?: RepoScopeExpand[] | string;
-  compare_repos?: string[] | string;
-  limit?: number;
-  offset?: number;
-  order?: RepoScopeOrder;
-}
-
-export interface RepoScopeSummary {
-  total_files?: number;
-  files_with_dependencies?: number;
-  dependency_count?: number;
-  function_count?: number;
-  variable_count?: number;
-  compared_repo_count?: number;
-}
-
-export interface RepoScopeCollections {
-  dependencies?: DependencyItem[];
-  functions?: ScopeSymbolItem[];
-  variables?: ScopeSymbolItem[];
-}
-
-export interface RepoScopeData {
-  repo?: Record<string, unknown>;
-  summary?: RepoScopeSummary;
-  scope?: RepoScopeCollections;
-}
-
-export interface RepoScopePagination {
-  dependencies?: Pagination;
-  functions?: Pagination;
-  variables?: Pagination;
-}
-
-export interface RepoScopeMeta extends Meta {
-  gated_kinds?: Array<"functions" | "variables">;
-}
-
-export interface RepoScopeResponse extends BaseResponse<RepoScopeData> {
-  pagination?: RepoScopePagination;
-  meta?: RepoScopeMeta;
 }
 
 // ---- Cross-repository dependency map (`GET /v2/repos/{repo_id}/map`) ----
@@ -495,74 +439,6 @@ export interface RepoRadiusData {
 }
 
 export interface RepoRadiusResponse extends BaseResponse<RepoRadiusData> {}
-
-// ---- Code review (`GET /v2/repos/{repo_id}/review`) ----
-
-export type RepoReviewOrder = "risk" | "complexity" | "coverage" | "debt";
-
-export interface ReviewFileMetrics {
-  cognitive_complexity?: number;
-  cyclomatic_complexity?: number;
-  duplication_percentage?: number;
-  duplicate_block_count?: number;
-  technical_debt_minutes?: number;
-  estimated_coverage?: number | null;
-  churn_rate?: string;
-}
-
-export interface ReviewFile extends ReviewFileMetrics {
-  id?: string;
-  file_name?: string;
-  file_path?: string;
-  verdict?: string;
-  risk_score?: number;
-  triggered_rules?: Record<string, unknown>[];
-  admin_enrichment?: Record<string, unknown>;
-}
-
-export interface RepoReviewData {
-  summary?: Record<string, unknown>;
-  files?: ReviewFile[];
-}
-
-export interface RepoReviewResponse extends BaseResponse<RepoReviewData> {
-  pagination?: Pagination;
-}
-
-// ---- Test gaps (`GET /v2/repos/{repo_id}/test-gaps`) ----
-
-export type TestGapPriority = "high" | "medium" | "low";
-
-export interface TestCaseProjection {
-  priority?: TestGapPriority;
-  description?: string;
-  target_function?: string;
-}
-
-export interface TestGapProjection {
-  risk_score?: number;
-  estimated_coverage?: number;
-  churn_rate?: string;
-  security_risk_level?: string;
-  suggested_test_cases?: TestCaseProjection[];
-  mockable_dependencies?: string[];
-  hard_to_test_reasons?: string[];
-}
-
-export interface TestGapFile extends TestGapProjection {
-  id?: string;
-  file_name?: string;
-  file_path?: string;
-}
-
-export interface RepoTestGapsData {
-  summary?: Record<string, unknown>;
-  gaps?: TestGapFile[];
-}
-
-export interface RepoTestGapsResponse extends BaseResponse<RepoTestGapsData> {
-  pagination?: Pagination;
-}
 
 // ============================================================================
 // File Types
