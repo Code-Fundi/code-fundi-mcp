@@ -10,8 +10,27 @@ import type {
   UsageByType, ActivityByDay, LanguageStat,
   ApiKey, AIModel, ReadmeData, RepoStatusData,
   RepositoryIndexInitRepo, Pagination, TierName,
+  PublicRepoListItem,
+  RepoMapData, RepoBlueprintData, RepoBlueprintMeta,
+  RepoRadiusData,
+  ModelLimitsData,
 } from "./types.js";
 import { CodeFundiApiError } from "./client.js";
+
+// ============================================================================
+// Internal helpers
+// ============================================================================
+
+/** Render an opaque JSON value as a fenced code block for faithful display. */
+function jsonBlock(value: unknown): string {
+  return "```json\n" + JSON.stringify(value, null, 2) + "\n```";
+}
+
+/** Read a string field from a loosely-typed record, if present. */
+function readString(obj: Record<string, unknown> | undefined, key: string): string | undefined {
+  const v = obj?.[key];
+  return typeof v === "string" ? v : undefined;
+}
 
 // ============================================================================
 // Search
@@ -142,6 +161,159 @@ export function formatReadme(data: ReadmeData): string {
   if (data.github_url) parts.push(`- **URL:** ${data.github_url}`);
   parts.push("");
   parts.push(data.documentation || data.data || "_No README content._");
+  return parts.join("\n");
+}
+
+export function formatPublicRepoList(repos: PublicRepoListItem[], pagination?: Pagination): string {
+  const parts: string[] = [];
+  parts.push(`## Public Repositories (${pagination?.total ?? repos.length})\n`);
+
+  if (repos.length === 0) {
+    parts.push("No public repositories found.");
+    return parts.join("\n");
+  }
+
+  for (const r of repos) {
+    parts.push(`### ${r.name}`);
+    parts.push(`- **ID:** \`${r.id}\``);
+    parts.push(`- **Link:** ${r.link}`);
+    if (r.updated_at) parts.push(`- **Updated:** ${r.updated_at}`);
+    if (r.top_files?.length) {
+      parts.push(`- **Top files:**`);
+      for (const f of r.top_files) {
+        const size = f.file_size_kb != null ? ` (${f.file_size_kb} KB)` : "";
+        parts.push(`  - \`${f.file_path}\`${size}`);
+      }
+    }
+    parts.push("");
+  }
+
+  if (pagination?.has_more) {
+    parts.push(`_Showing ${repos.length} of ${pagination.total}. Use offset=${pagination.offset + pagination.limit} for next page._`);
+  }
+
+  return parts.join("\n");
+}
+
+// ============================================================================
+// Repository Intelligence (map, blueprint, radius)
+// ============================================================================
+
+export function formatRepoMap(data: RepoMapData): string {
+  const parts: string[] = [];
+  const srcName = readString(data.source_repo, "name");
+  parts.push(`## Cross-Repository Dependency Map${srcName ? `: ${srcName}` : ""}\n`);
+
+  if (data.scope && Object.keys(data.scope).length) {
+    parts.push("### Scope");
+    parts.push(jsonBlock(data.scope));
+    parts.push("");
+  }
+
+  const deps = data.dependencies ?? [];
+  if (!deps.length) {
+    parts.push("No dependency map entries found.");
+    return parts.join("\n");
+  }
+
+  parts.push(`### Dependencies (${deps.length})`);
+  for (const d of deps) {
+    const name = readString(d, "name") ?? "(unnamed)";
+    const type = readString(d, "type");
+    parts.push(`- **${name}**${type ? ` [${type}]` : ""}`);
+    const repos = Array.isArray(d.repos) ? d.repos : undefined;
+    if (repos?.length) parts.push(`  - Present in ${repos.length} repo(s)`);
+  }
+
+  return parts.join("\n");
+}
+
+export function formatRepoBlueprint(data: RepoBlueprintData, meta?: RepoBlueprintMeta): string {
+  const parts: string[] = [];
+  const name = data.repo?.name ?? data.file_name ?? "Repository";
+  parts.push(`## ${name} — Blueprint\n`);
+  if (meta?.deprecated) {
+    parts.push("_Note: the `/readme` endpoint is deprecated; prefer `code-fundi-repo-blueprint`._\n");
+  }
+  if (data.github_url) parts.push(`- **URL:** ${data.github_url}`);
+
+  const deps = data.dependencies ?? [];
+  if (deps.length) {
+    parts.push(`\n### Top Dependencies (${deps.length})`);
+    for (const d of deps.slice(0, 25)) {
+      const ver = d.version ? `@${d.version}` : "";
+      const typ = d.type ? ` [${d.type}]` : "";
+      const usage = d.usage?.file_count !== undefined ? ` — ${d.usage.file_count} file(s)` : "";
+      parts.push(`- **${d.name}**${ver}${typ}${usage}`);
+    }
+    if (deps.length > 25) parts.push(`_...and ${deps.length - 25} more_`);
+  }
+
+  const tf = data.symbols?.top_functions ?? [];
+  if (tf.length) {
+    parts.push(`\n### Top Functions (${tf.length})`);
+    for (const f of tf.slice(0, 25)) parts.push(`- \`${f.name}\`${f.type ? ` [${f.type}]` : ""}`);
+  }
+
+  const tv = data.symbols?.top_variables ?? [];
+  if (tv.length) {
+    parts.push(`\n### Top Variables (${tv.length})`);
+    for (const v of tv.slice(0, 25)) parts.push(`- \`${v.name}\`${v.type ? ` [${v.type}]` : ""}`);
+  }
+
+  if (data.conventions && Object.keys(data.conventions).length) {
+    parts.push(`\n### Coding Conventions`);
+    parts.push(jsonBlock(data.conventions));
+  } else if (meta?.conventions_tier_gated) {
+    parts.push(`\n_Coding conventions require PRO tier or higher._`);
+  }
+
+  if (data.documentation) {
+    parts.push(`\n### README\n`);
+    parts.push(data.documentation);
+  }
+
+  return parts.join("\n");
+}
+
+export function formatRepoRadius(data: RepoRadiusData): string {
+  const parts: string[] = [];
+  parts.push("## Blast Radius Analysis\n");
+
+  if (data.summary && Object.keys(data.summary).length) {
+    parts.push("### Summary");
+    parts.push(jsonBlock(data.summary));
+    parts.push("");
+  }
+
+  const targets = data.targets ?? [];
+  if (!targets.length) {
+    parts.push("No impact targets found.");
+    return parts.join("\n");
+  }
+
+  targets.forEach((t, i) => {
+    parts.push(`### Target ${i + 1}`);
+    if (t.entry_points?.length) parts.push(`- **Entry points:** ${t.entry_points.join(", ")}`);
+    if (t.data_flows?.length) {
+      parts.push(`- **Data flows (${t.data_flows.length}):**`);
+      for (const f of t.data_flows) {
+        parts.push(`  - ${f.source_kind ?? "?"} → ${f.sink_kind ?? "?"} (risk: ${f.risk_level ?? "n/a"})`);
+      }
+    }
+    if (t.call_edges?.length) {
+      parts.push(`- **Call edges (${t.call_edges.length}):**`);
+      for (const e of t.call_edges) {
+        parts.push(`  - ${e.caller ?? "?"} → ${e.callee ?? "?"}${e.call_type ? ` (${e.call_type})` : ""}`);
+      }
+    }
+    if (t.admin_enrichment && Object.keys(t.admin_enrichment).length) {
+      parts.push(`- **Admin enrichment:**`);
+      parts.push(jsonBlock(t.admin_enrichment));
+    }
+    parts.push("");
+  });
+
   return parts.join("\n");
 }
 
@@ -301,14 +473,54 @@ export function formatApiKeys(keys: ApiKey[]): string {
 export function formatModels(models: AIModel[]): string {
   const parts: string[] = [];
   parts.push(`## Available Models (${models.length})\n`);
-  parts.push("| Name | Provider | Tier |");
-  parts.push("|------|----------|------|");
+  parts.push("| Name | Provider | Tier | Context |");
+  parts.push("|------|----------|------|---------|");
   for (const m of models) {
     const tier =
       m.tier_required
       ?? (m.tier_requirements?.premium_only ? "PRO" as TierName : "FREE" as TierName);
-    parts.push(`| ${m.name} | ${m.provider} | ${tier} |`);
+    const ctx = m.context_length != null ? m.context_length.toLocaleString() : "—";
+    parts.push(`| ${m.name} | ${m.provider} | ${tier} | ${ctx} |`);
   }
+  return parts.join("\n");
+}
+
+export function formatModelLimits(data: ModelLimitsData): string {
+  const parts: string[] = [];
+  parts.push(`## Model Limits & Tier${data.tier ? `: ${data.tier}` : ""}\n`);
+
+  const sub = data.subscription;
+  if (sub) {
+    const info: string[] = [];
+    if (sub.tokens !== undefined) info.push(`Tokens: ${sub.tokens}`);
+    if (sub.bonus_tokens !== undefined) info.push(`Bonus: ${sub.bonus_tokens}`);
+    if (sub.expiry_date) info.push(`Expires: ${sub.expiry_date}`);
+    if (info.length) parts.push(`**Subscription:** ${info.join(" | ")}`);
+  }
+
+  const m = data.model;
+  if (m) {
+    parts.push(`\n### Active Model`);
+    if (m.name) parts.push(`- **Name:** ${m.name}${m.provider ? ` (${m.provider})` : ""}`);
+    if (m.max_tokens !== undefined) parts.push(`- **Max tokens:** ${m.max_tokens}`);
+    if (m.context_length !== undefined) parts.push(`- **Context length:** ${m.context_length}`);
+    if (m.vector_search_length !== undefined) parts.push(`- **Vector search length:** ${m.vector_search_length}`);
+    if (m.knowledge_search_length !== undefined) parts.push(`- **Knowledge search length:** ${m.knowledge_search_length}`);
+    if (m.knowledge_storage_limit !== undefined) parts.push(`- **Knowledge storage limit:** ${m.knowledge_storage_limit}`);
+  }
+
+  const l = data.limits;
+  if (l) {
+    parts.push(`\n### Limits`);
+    if (l.history_days !== undefined) parts.push(`- **History days:** ${l.history_days}`);
+    if (l.history_max_records !== undefined) parts.push(`- **History max records:** ${l.history_max_records}`);
+    if (l.repos_max !== undefined) parts.push(`- **Max repos:** ${l.repos_max}`);
+    if (l.files_per_repo_max !== undefined) parts.push(`- **Files per repo:** ${l.files_per_repo_max}`);
+    if (l.stats_range_max_days !== undefined) parts.push(`- **Stats range max days:** ${l.stats_range_max_days}`);
+    if (l.can_access_org_repos !== undefined) parts.push(`- **Can access org repos:** ${l.can_access_org_repos}`);
+    if (l.can_share_to_org !== undefined) parts.push(`- **Can share to org:** ${l.can_share_to_org}`);
+  }
+
   return parts.join("\n");
 }
 
@@ -320,7 +532,7 @@ export function formatError(err: unknown): string {
   if (err instanceof CodeFundiApiError) {
     let msg = `**Code-Fundi API Error (${err.statusCode}):** ${err.message}`;
     if (err.statusCode === 401) {
-      msg += "\n\n_Tip: Use `code-fundi-auth-authenticate` and `code-fundi-auth-verify` to sign in, or set the CODEFUNDI_API_KEY environment variable._";
+      msg += "\n\n_Tip: Use `code-fundi-auth-authenticate` and `code-fundi-auth-verify` to sign in, or set the CODEFUNDI_API_KEY environment variable. After auth, persist the key in MCP config so future sessions stay signed in._";
     }
     if (err.retryAfter) msg += `\n_Retry after: ${err.retryAfter}s_`;
     return msg;

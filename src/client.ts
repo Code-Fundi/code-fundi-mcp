@@ -15,8 +15,12 @@ import type {
   ActivityStatsResponse, LanguageStatsResponse, ApiKeysListResponse,
   ApiKeyRegenerateResponse, ApiKeyDeleteResponse, V2AuthAuthenticateResponse,
   V2AuthVerifyResponse, V2AuthResendResponse, V2AuthMode,
-  ChatRequest, ChatResponse, ModelsResponse, SearchFieldsParam,
+  ChatRequest, ChatResponse, ModelsResponse, V2ModelsListResponse,
+  ModelLimitsResponse, SearchFieldsParam,
   SortOrder, StatsRange, RepoScope, HistoryCategory, ErrorResponse,
+  PublicRepoListResponse,
+  RepoMapOptions, RepoMapResponse, RepoBlueprintResponse,
+  RepoRadiusRequest, RepoRadiusResponse,
 } from "./types.js";
 
 // ============================================================================
@@ -84,6 +88,14 @@ export class CodeFundiClient {
         401,
       );
     }
+  }
+
+  /**
+   * Require an API key unless the caller opts into demo mode (pre-signup, IP-based credits).
+   * Endpoints that expose the OpenAPI `demo` flag can execute anonymously in demo mode.
+   */
+  private requireKeyUnlessDemo(demo?: boolean): void {
+    if (!demo) this.requireApiKey();
   }
 
   private authHeaders(): Record<string, string> {
@@ -239,6 +251,47 @@ export class CodeFundiClient {
     return this.request<ReadmeResponse>(`/v2/repos/${encodeRepoKey(repoKey)}/readme`, { method: "GET" });
   }
 
+  /**
+   * `GET /v2/public/repos` — global public repository catalog. No API key required
+   * (anonymous callers are IP rate limited; pass `internalSecret` for unlimited enumeration).
+   */
+  async listPublicRepos(
+    opts: { limit?: number; offset?: number; since?: string; file_count?: number; internalSecret?: string } = {},
+  ): Promise<PublicRepoListResponse> {
+    const { internalSecret, ...query } = opts;
+    const headers: Record<string, string> = {};
+    if (internalSecret) headers["X-Internal-Secret"] = internalSecret;
+    return this.request<PublicRepoListResponse>(`/v2/public/repos${buildQuery(query)}`, { method: "GET", headers });
+  }
+
+  // ==== V2 Repository Intelligence ====
+
+  async getRepoMap(repoKey: string, opts: RepoMapOptions = {}): Promise<RepoMapResponse> {
+    const { demo, ...rest } = opts;
+    this.requireKeyUnlessDemo(demo);
+    const qs = buildQuery({ ...rest, demo: demo || undefined });
+    return this.request<RepoMapResponse>(`/v2/repos/${encodeRepoKey(repoKey)}/map${qs}`, { method: "GET" });
+  }
+
+  async getRepoBlueprint(
+    repoKey: string,
+    opts: { conventions_path_prefix?: string; demo?: boolean } = {},
+  ): Promise<RepoBlueprintResponse> {
+    const { demo, ...rest } = opts;
+    this.requireKeyUnlessDemo(demo);
+    const qs = buildQuery({ ...rest, demo: demo || undefined });
+    return this.request<RepoBlueprintResponse>(`/v2/repos/${encodeRepoKey(repoKey)}/blueprint${qs}`, { method: "GET" });
+  }
+
+  async getRepoRadius(repoKey: string, body: RepoRadiusRequest, demo?: boolean): Promise<RepoRadiusResponse> {
+    this.requireKeyUnlessDemo(demo);
+    const qs = buildQuery({ demo: demo || undefined });
+    return this.request<RepoRadiusResponse>(
+      `/v2/repos/${encodeRepoKey(repoKey)}/radius${qs}`,
+      { method: "POST", body: JSON.stringify(body) },
+    );
+  }
+
   // ==== V2 Files ====
 
   async listFiles(repoKey: string, opts: { search?: string | null; limit?: number; offset?: number; order_by?: string; order?: SortOrder } = {}): Promise<FileListResponse> {
@@ -324,7 +377,7 @@ export class CodeFundiClient {
     return this.postUnauth<V2AuthResendResponse>("/v2/auth/resend", { email: p.email, type: p.type ?? "signup" });
   }
 
-  // ==== V1 Chat & Models (OpenAPI: AI Chat; server body uses `question`, not `prompt`) ====
+  // ==== V1 Chat (OpenAPI: AI Chat; server body uses `question`, not `prompt`) ====
 
   async chat(req: ChatRequest): Promise<ChatResponse> {
     this.requireApiKey();
@@ -341,9 +394,21 @@ export class CodeFundiClient {
     return this.parseFundiChatResponse(res);
   }
 
+  // ==== V2 Models ====
+
+  /**
+   * `GET /v2/models` — curated CodeFundi chat model catalog. The API wraps the list under
+   * `data.models`; this method normalizes it to `{ models }` for MCP tools.
+   */
   async getModels(): Promise<ModelsResponse> {
     this.requireApiKey();
-    return this.request<ModelsResponse>("/v1/fundi/models", { method: "GET" });
+    const res = await this.request<V2ModelsListResponse>("/v2/models", { method: "GET" });
+    return { models: res.data?.models ?? [] };
+  }
+
+  async getModelLimits(): Promise<ModelLimitsResponse> {
+    this.requireApiKey();
+    return this.request<ModelLimitsResponse>("/v2/models/limits", { method: "GET" });
   }
 }
 

@@ -9,7 +9,7 @@
 // Common Types
 // ============================================================================
 
-export type TierName = "FREE" | "DEV" | "PRO" | "ENTERPRISE";
+export type TierName = "FREE" | "DEV" | "STARTUP" | "PRO" | "ENTERPRISE";
 
 export type SearchScope = "all" | "repos" | "files" | "code" | "functions";
 
@@ -267,6 +267,178 @@ export interface ReadmeData {
 }
 
 export interface ReadmeResponse extends BaseResponse<ReadmeData> {}
+
+// ============================================================================
+// Public Repository Catalog Types (`GET /v2/public/repos`)
+// ============================================================================
+
+export interface PublicRepoTopFile {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size_kb?: number | null;
+  updated_at?: string | null;
+}
+
+export interface PublicRepoListItem {
+  id: string;
+  link: string;
+  name: string;
+  updated_at?: string | null;
+  /** Present only when the `file_count` query param is > 0. */
+  top_files?: PublicRepoTopFile[];
+}
+
+export interface PublicRepoListMeta extends Meta {
+  scope?: string;
+  file_count?: number;
+}
+
+export interface PublicRepoListResponse extends PaginatedResponse<PublicRepoListItem> {
+  meta?: PublicRepoListMeta;
+}
+
+// ============================================================================
+// Repository Intelligence Types (map, blueprint, radius)
+// ============================================================================
+
+export type DependencyType = "package" | "import" | "export" | "env";
+
+export interface DependencyUsage {
+  file_count?: number;
+  total_files?: number;
+  percentage?: number;
+  occurrence_count?: number;
+}
+
+export interface DependencyComparison {
+  status?: "source_only" | "shared" | "comparison_only";
+  repos?: Record<string, unknown>[];
+}
+
+export interface DependencyItem {
+  name: string;
+  version?: string | null;
+  type?: string;
+  symbols?: string[];
+  usage?: DependencyUsage;
+  comparison?: DependencyComparison;
+  files?: Record<string, unknown>[];
+  functions?: Record<string, unknown>[];
+}
+
+export interface ScopeSymbolItem {
+  name: string;
+  type?: string;
+  usage?: DependencyUsage;
+  detail?: Record<string, unknown> | null;
+}
+
+// ---- Cross-repository dependency map (`GET /v2/repos/{repo_id}/map`) ----
+
+export interface RepoMapOptions {
+  dependency?: string;
+  type?: DependencyType;
+  /** Comma-separated repository UUIDs (max 10). */
+  compare_repos?: string;
+  include_public_index?: boolean;
+  limit?: number;
+  files_per_repo?: number;
+  demo?: boolean;
+}
+
+export interface RepoMapData {
+  source_repo?: Record<string, unknown>;
+  scope?: Record<string, unknown>;
+  dependencies?: Record<string, unknown>[];
+}
+
+export interface RepoMapResponse extends BaseResponse<RepoMapData> {}
+
+// ---- Blueprint (`GET /v2/repos/{repo_id}/blueprint`) ----
+
+export interface RepoBlueprintRepo {
+  id?: string;
+  name?: string;
+  link?: string;
+  description?: string | null;
+  [key: string]: unknown;
+}
+
+export interface RepoBlueprintSymbols {
+  top_functions?: ScopeSymbolItem[];
+  top_variables?: ScopeSymbolItem[];
+}
+
+export interface RepoBlueprintData {
+  id?: string | null;
+  file_name?: string;
+  file_path?: string;
+  github_url?: string | null;
+  repo?: RepoBlueprintRepo;
+  /** Markdown README documentation. */
+  documentation?: string;
+  /** Raw README file content. */
+  data?: string | null;
+  dependencies?: DependencyItem[];
+  symbols?: RepoBlueprintSymbols;
+  /** Aggregated conventions (null below PRO tier). */
+  conventions?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface RepoBlueprintMeta extends Meta {
+  conventions_tier_gated?: boolean;
+  /** true on the `/readme` alias only. */
+  deprecated?: boolean;
+}
+
+export interface RepoBlueprintResponse extends BaseResponse<RepoBlueprintData> {
+  meta?: RepoBlueprintMeta;
+}
+
+// ---- Blast radius (`POST /v2/repos/{repo_id}/radius`) ----
+
+export type DataFlowKind = "http_input" | "env_config" | "filesystem" | "cli_input" | "internal";
+
+export interface DataFlowProjection {
+  id?: string | null;
+  risk_level?: string;
+  source_kind?: DataFlowKind;
+  sink_kind?: DataFlowKind;
+}
+
+export interface CallEdgeProjection {
+  caller?: string;
+  callee?: string;
+  call_type?: string;
+}
+
+export interface RepoRadiusRequest {
+  file?: string;
+  files?: string[];
+  dependency?: string;
+  dependencies?: string[];
+  include?: string[];
+  limit?: number;
+}
+
+export interface RepoRadiusTarget {
+  data_flows?: DataFlowProjection[];
+  entry_points?: string[];
+  call_edges?: CallEdgeProjection[];
+  /** ADMIN only. */
+  admin_enrichment?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface RepoRadiusData {
+  summary?: Record<string, unknown>;
+  targets?: RepoRadiusTarget[];
+}
+
+export interface RepoRadiusResponse extends BaseResponse<RepoRadiusData> {}
 
 // ============================================================================
 // File Types
@@ -592,24 +764,77 @@ export interface ChatResponse extends BaseResponse {
 }
 
 // ============================================================================
-// V1 Models Types (no V2 equivalent)
+// Models Types (`GET /v2/models`, `GET /v2/models/limits`)
 // ============================================================================
+
+export interface AIModelCreditCost {
+  /** null means use tier credit_search_base from GET /v2/models/limits. */
+  search_base?: number | null;
+  search_base_from_tier?: boolean;
+  chat_min?: number | null;
+  chat_min_from_tier?: boolean;
+}
 
 export interface AIModel {
   id: string;
   name: string;
   provider: string;
-  /** Present on normalized MCP catalog entries. */
+  /** Curated tier requirement for the model. */
   tier_required?: TierName;
-  /** Raw `/v1/fundi/models` entries from OpenRouter catalog mapping. */
+  /** Raw catalog entries from the OpenRouter catalog mapping. */
   tier_requirements?: {
     premium_only?: boolean;
     default_model?: boolean;
-    preview_mode?: unknown;
+    preview_mode?: Record<string, unknown> | null;
   };
-  context_length?: number;
+  context_length?: number | null;
+  /** Search/research credit costs (present on the V2 curated catalog). */
+  credit_cost?: AIModelCreditCost;
 }
 
+/** `GET /v2/models` returns the curated catalog wrapped under `data.models`. */
+export interface V2ModelsListData {
+  models: AIModel[];
+}
+
+export interface V2ModelsListResponse extends BaseResponse<V2ModelsListData> {}
+
+/** Normalized shape returned by the client for MCP tools. */
 export interface ModelsResponse {
   models: AIModel[];
 }
+
+export interface ModelLimitsSubscription {
+  tokens?: number;
+  bonus_tokens?: number;
+  expiry_date?: string;
+}
+
+export interface ModelLimitsModel {
+  name?: string;
+  provider?: string;
+  max_tokens?: number;
+  context_length?: number;
+  vector_search_length?: number;
+  knowledge_search_length?: number;
+  knowledge_storage_limit?: number;
+}
+
+export interface ModelLimitsLimits {
+  history_days?: number;
+  history_max_records?: number;
+  repos_max?: number;
+  files_per_repo_max?: number;
+  stats_range_max_days?: number;
+  can_access_org_repos?: boolean;
+  can_share_to_org?: boolean;
+}
+
+export interface ModelLimitsData {
+  tier?: string;
+  subscription?: ModelLimitsSubscription;
+  model?: ModelLimitsModel | null;
+  limits?: ModelLimitsLimits;
+}
+
+export interface ModelLimitsResponse extends BaseResponse<ModelLimitsData> {}

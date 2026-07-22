@@ -109,6 +109,84 @@ describe("CodeFundiClient", () => {
     it("getModels should throw without API key", async () => {
       await expect(noKeyClient.getModels()).rejects.toThrow(CodeFundiApiError);
     });
+
+    it("getModelLimits should throw without API key", async () => {
+      await expect(noKeyClient.getModelLimits()).rejects.toThrow(CodeFundiApiError);
+    });
+
+    it("getRepoMap should throw without API key (non-demo)", async () => {
+      await expect(noKeyClient.getRepoMap("repo-id")).rejects.toThrow(CodeFundiApiError);
+    });
+
+    it("getRepoBlueprint should throw without API key (non-demo)", async () => {
+      await expect(noKeyClient.getRepoBlueprint("repo-id")).rejects.toThrow(CodeFundiApiError);
+    });
+
+    it("getRepoRadius should throw without API key (non-demo)", async () => {
+      await expect(noKeyClient.getRepoRadius("repo-id", { file: "src/index.ts" })).rejects.toThrow(CodeFundiApiError);
+    });
+  });
+
+  // ==== V2 repository intelligence & demo mode ====
+
+  describe("V2 repository intelligence", () => {
+    it("listPublicRepos should not require an API key", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ status: "success", data: [], pagination: { total: 0, limit: 100, offset: 0, has_more: false } }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const noKeyClient = new CodeFundiClient("https://api.test.codefundi.app");
+      await noKeyClient.listPublicRepos({ limit: 10, file_count: 3 });
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toContain("/v2/public/repos");
+      expect(url).toContain("limit=10");
+      expect(url).toContain("file_count=3");
+      expect(options.method).toBe("GET");
+      expect(options.headers["X-API-Key"]).toBeUndefined();
+
+      vi.unstubAllGlobals();
+    });
+
+    it("listPublicRepos should send X-Internal-Secret header when provided", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ status: "success", data: [] }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const noKeyClient = new CodeFundiClient("https://api.test.codefundi.app");
+      await noKeyClient.listPublicRepos({ internalSecret: "s3cr3t" });
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).not.toContain("internalSecret");
+      expect(options.headers["X-Internal-Secret"]).toBe("s3cr3t");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("getModels should GET /v2/models and normalize data.models", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: "success",
+          data: { models: [{ id: "gpt-4", name: "GPT-4", provider: "openai", tier_required: "PRO" }] },
+        }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const res = await client.getModels();
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("https://api.test.codefundi.app/v2/models");
+      expect(options.method).toBe("GET");
+      expect(res.models).toHaveLength(1);
+      expect(res.models[0].id).toBe("gpt-4");
+
+      vi.unstubAllGlobals();
+    });
   });
 
   // ==== Auth methods do NOT require API key ====

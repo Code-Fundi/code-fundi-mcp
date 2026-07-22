@@ -3,13 +3,13 @@
  *
  * Chat uses `POST /v1/fundi/chat` (OpenAPI "AI Chat"). The production API streams HTML;
  * the client collects the full body into a single string for MCP tools.
- * Model catalog uses `GET /v1/fundi/models` (no separate `/v2/chat` in the published OpenAPI).
+ * The model catalog uses `GET /v2/models` and per-tier limits use `GET /v2/models/limits`.
  */
 
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
-import { formatModels, formatError } from "../formatters.js";
+import { formatModels, formatModelLimits, formatError } from "../formatters.js";
 
 export function registerChatTools(server: FastMCP): void {
   server.addTool({
@@ -65,7 +65,8 @@ export function registerChatTools(server: FastMCP): void {
 
   server.addTool({
     name: "code-fundi-list-models",
-    description: "List all available AI models on Code-Fundi with their providers and required tier.",
+    description:
+      "List the curated Code-Fundi chat model catalog (GET /v2/models) with providers, required tier, and context length.",
     parameters: z.object({}),
     annotations: { title: "List AI Models", readOnlyHint: true },
     execute: async () => {
@@ -73,6 +74,23 @@ export function registerChatTools(server: FastMCP): void {
         const client = getClient();
         const res = await client.getModels();
         return formatModels(res.models || []);
+      } catch (err) { return formatError(err); }
+    },
+  });
+
+  server.addTool({
+    name: "code-fundi-model-limits",
+    description:
+      "Get the AI model limits and tier configuration for your account (GET /v2/models/limits): " +
+      "subscription tokens, the active model's context/knowledge limits, and account limits such as " +
+      "max repositories, files per repo, history retention, and organization access.",
+    parameters: z.object({}),
+    annotations: { title: "Model Limits", readOnlyHint: true },
+    execute: async () => {
+      try {
+        const client = getClient();
+        const res = await client.getModelLimits();
+        return res.data ? formatModelLimits(res.data) : "No model limit data available.";
       } catch (err) { return formatError(err); }
     },
   });
