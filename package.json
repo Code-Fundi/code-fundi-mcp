@@ -1,6 +1,7 @@
 {
   "name": "@codefundi/code-fundi-mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
+  "mcpName": "io.github.FelixWaweru/code-fundi-mcp",
   "description": "MCP server for CodeFundi: the codebase map and blast-radius guard for AI coding agents like Claude Code, Cursor, and Copilot.",
   "keywords": [
     "mcp",
