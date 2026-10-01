@@ -8,6 +8,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatApiKeys, formatError } from "../formatters.js";
 
 export function registerAuthTools(server: FastMCP): void {
@@ -28,9 +29,9 @@ export function registerAuthTools(server: FastMCP): void {
       password: z.string().optional().describe("Password (only used when auth_mode is 'password')"),
     }),
     annotations: { title: "Authenticate", readOnlyHint: false, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.authAuthenticate({
           email: args.email,
           auth_mode: args.auth_mode,
@@ -80,9 +81,9 @@ export function registerAuthTools(server: FastMCP): void {
       token: z.string().min(6).max(6).describe("6-digit OTP verification code"),
     }),
     annotations: { title: "Verify OTP", readOnlyHint: false },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.authVerify({ email: args.email, token: args.token });
         const d = res.data;
 
@@ -118,9 +119,9 @@ export function registerAuthTools(server: FastMCP): void {
       type: z.enum(["signup", "email_change", "email"]).optional().describe("Resend type (default: signup)"),
     }),
     annotations: { title: "Resend OTP", readOnlyHint: false },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         await client.authResend({ email: args.email, type: args.type });
         return `📧 Verification code resent to **${args.email}**. Use \`code-fundi-auth-verify\` with the new code.`;
       } catch (err) { return formatError(err); }
@@ -134,9 +135,9 @@ export function registerAuthTools(server: FastMCP): void {
     description: "List all Code-Fundi API keys (masked) for the authenticated account.",
     parameters: z.object({}),
     annotations: { title: "List API Keys", readOnlyHint: true },
-    execute: async () => {
+    execute: async (_args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.listApiKeys();
         return formatApiKeys(res.data || []);
       } catch (err) { return formatError(err); }
@@ -150,9 +151,9 @@ export function registerAuthTools(server: FastMCP): void {
       "The new key is automatically configured for all subsequent tool calls.",
     parameters: z.object({}),
     annotations: { title: "Regenerate API Key", readOnlyHint: false, destructiveHint: true },
-    execute: async () => {
+    execute: async (_args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.regenerateApiKey();
         if (res.data?.key) {
           client.setApiKey(res.data.key);
@@ -178,9 +179,9 @@ export function registerAuthTools(server: FastMCP): void {
       key_id: z.string().uuid().describe("API key UUID to disable"),
     }),
     annotations: { title: "Disable API Key", readOnlyHint: false, destructiveHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.deleteApiKey(args.key_id);
         if (res.status === "success" || res.data?.deleted) {
           return res.message || `API key \`${args.key_id}\` disabled.`;

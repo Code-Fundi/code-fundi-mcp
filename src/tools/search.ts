@@ -8,6 +8,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatSearchResults, formatResearchResult, formatError } from "../formatters.js";
 
 export function registerSearchTools(server: FastMCP): void {
@@ -37,9 +38,9 @@ export function registerSearchTools(server: FastMCP): void {
       visibility: z.enum(["private", "public", "all"]).optional().describe("Repository visibility filter"),
     }),
     annotations: { title: "Code-Fundi Search", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const response = await client.search({
           query: args.query,
           scope: args.scope,
@@ -91,9 +92,9 @@ export function registerSearchTools(server: FastMCP): void {
       similarity_threshold: z.number().min(0).max(1).optional(),
     }),
     annotations: { title: "Code-Fundi Research", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const result = await client.searchWithChat({
           query: args.query,
           scope: args.scope,

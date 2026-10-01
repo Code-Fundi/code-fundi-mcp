@@ -5,6 +5,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import {
   formatRepoList, formatIndexResult, formatRepoStatus,
   formatReadme, formatPublicRepoList, formatError,
@@ -25,9 +26,9 @@ export function registerRepoTools(server: FastMCP): void {
       order: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
     }),
     annotations: { title: "List Repositories", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.listRepos(args);
         return formatRepoList(res.data || [], res.pagination);
       } catch (err) { return formatError(err); }
@@ -45,9 +46,9 @@ export function registerRepoTools(server: FastMCP): void {
       update: z.boolean().optional().describe("If true, re-index an already indexed repo"),
     }),
     annotations: { title: "Index Repository", readOnlyHint: false, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.indexRepo(args);
         if (res.data?.repo) {
           return formatIndexResult(res.data.repo, res.message);
@@ -64,9 +65,9 @@ export function registerRepoTools(server: FastMCP): void {
       url: z.string().describe("Git clone URL to check status for"),
     }),
     annotations: { title: "Repository Status", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getRepoStatus(args.url);
         return res.data ? formatRepoStatus(res.data) : "No status data available.";
       } catch (err) { return formatError(err); }
@@ -83,9 +84,9 @@ export function registerRepoTools(server: FastMCP): void {
       repo_key: z.string().describe("Repository UUID or clone URL"),
     }),
     annotations: { title: "Repository README", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getRepoReadme(args.repo_key);
         return res.data ? formatReadme(res.data) : "No README found.";
       } catch (err) { return formatError(err); }
@@ -106,9 +107,9 @@ export function registerRepoTools(server: FastMCP): void {
       internal_secret: z.string().optional().describe("Internal sitemap secret for unlimited server-side enumeration (optional)"),
     }),
     annotations: { title: "List Public Repositories", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const { internal_secret, ...opts } = args;
         const res = await client.listPublicRepos({ ...opts, internalSecret: internal_secret });
         return formatPublicRepoList(res.data || [], res.pagination);

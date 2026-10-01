@@ -5,6 +5,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatFileList, formatFileDocumentation, formatError } from "../formatters.js";
 
 export function registerFileTools(server: FastMCP): void {
@@ -23,9 +24,9 @@ export function registerFileTools(server: FastMCP): void {
       order: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
     }),
     annotations: { title: "List Files", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const { repo_key, ...opts } = args;
         const res = await client.listFiles(repo_key, opts);
         return formatFileList(res.data || [], res.pagination);
@@ -46,9 +47,9 @@ export function registerFileTools(server: FastMCP): void {
       ),
     }),
     annotations: { title: "File Documentation", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getFileDocumentation(args.repo_key, args.file_id, args.fields);
         return res.data ? formatFileDocumentation(res.data) : "No documentation available.";
       } catch (err) { return formatError(err); }

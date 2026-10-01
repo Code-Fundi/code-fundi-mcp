@@ -9,6 +9,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatModels, formatModelLimits, formatError } from "../formatters.js";
 
 export function registerChatTools(server: FastMCP): void {
@@ -34,9 +35,9 @@ export function registerChatTools(server: FastMCP): void {
       })).optional().describe("Previous conversation messages for context"),
     }),
     annotations: { title: "Code-Fundi Chat", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.chat({
           prompt: args.prompt,
           model: args.model,
@@ -69,9 +70,9 @@ export function registerChatTools(server: FastMCP): void {
       "List the curated Code-Fundi chat model catalog (GET /v2/models) with providers, required tier, and context length.",
     parameters: z.object({}),
     annotations: { title: "List AI Models", readOnlyHint: true },
-    execute: async () => {
+    execute: async (_args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getModels();
         return formatModels(res.models || []);
       } catch (err) { return formatError(err); }
@@ -86,9 +87,9 @@ export function registerChatTools(server: FastMCP): void {
       "max repositories, files per repo, history retention, and organization access.",
     parameters: z.object({}),
     annotations: { title: "Model Limits", readOnlyHint: true },
-    execute: async () => {
+    execute: async (_args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getModelLimits();
         return res.data ? formatModelLimits(res.data) : "No model limit data available.";
       } catch (err) { return formatError(err); }

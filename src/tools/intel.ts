@@ -7,6 +7,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import {
   formatRepoMap, formatRepoBlueprint,
   formatRepoRadius, formatError,
@@ -29,9 +30,9 @@ export function registerRepoIntelTools(server: FastMCP): void {
       demo: z.boolean().optional().describe("Run in demo mode (pre-signup, public data, IP-based credits)"),
     }),
     annotations: { title: "Repository Dependency Map", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const { repo_key, compare_repos, ...rest } = args;
         const res = await client.getRepoMap(repo_key, {
           ...rest,
@@ -54,9 +55,9 @@ export function registerRepoIntelTools(server: FastMCP): void {
       demo: z.boolean().optional().describe("Run in demo mode (pre-signup, public data, IP-based credits)"),
     }),
     annotations: { title: "Repository Blueprint", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const { repo_key, ...opts } = args;
         const res = await client.getRepoBlueprint(repo_key, opts);
         return res.data ? formatRepoBlueprint(res.data, res.meta) : "No blueprint available.";
@@ -81,9 +82,9 @@ export function registerRepoIntelTools(server: FastMCP): void {
       demo: z.boolean().optional().describe("Run in demo mode (pre-signup, public data, IP-based credits)"),
     }),
     annotations: { title: "Repository Blast Radius", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const { repo_key, demo, ...body } = args;
         const res = await client.getRepoRadius(repo_key, body, demo);
         return res.data ? formatRepoRadius(res.data) : "No blast radius data available.";

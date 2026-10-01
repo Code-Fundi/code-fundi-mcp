@@ -413,14 +413,31 @@ export class CodeFundiClient {
 }
 
 // ============================================================================
-// Singleton
+// Singleton (stdio only)
 // ============================================================================
 
 let _instance: CodeFundiClient | null = null;
 
-export function getClient(): CodeFundiClient {
+/**
+ * Process-wide client for stdio. Under CODEFUNDI_MCP_TRANSPORT=httpStream,
+ * callers must pass a per-session client (never mutate this singleton).
+ */
+export function getClient(sessionClient?: CodeFundiClient | null): CodeFundiClient {
+  if (sessionClient) {
+    return sessionClient;
+  }
+  if (String(process.env.CODEFUNDI_MCP_TRANSPORT || "").toLowerCase() === "httpstream") {
+    throw new Error(
+      "HTTP Stream transport forbids the process-wide getClient() singleton; use context.session.client"
+    );
+  }
   if (!_instance) {
     _instance = new CodeFundiClient(process.env.CODEFUNDI_BASE_URL, process.env.CODEFUNDI_API_KEY);
   }
   return _instance;
+}
+
+/** @internal tests */
+export function _resetClientForTests(): void {
+  _instance = null;
 }
