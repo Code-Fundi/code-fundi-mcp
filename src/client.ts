@@ -22,6 +22,8 @@ import type {
   RepoMapOptions, RepoMapResponse, RepoBlueprintResponse,
   RepoRadiusRequest, RepoRadiusResponse,
 } from "./types.js";
+import { parseFundiChatBody } from "./chatParse.js";
+import { randomUUID } from "node:crypto";
 
 // ============================================================================
 // Error
@@ -123,6 +125,13 @@ export class CodeFundiClient {
       ...init,
       headers: { ...this.authHeaders(), ...(init.headers as Record<string, string> || {}) },
     });
+    if (res.status === 202) {
+      const { msg, code, retryAfter } = await this.readHttpError(res);
+      throw new CodeFundiApiError(msg || "Request pending", 202, {
+        code: code || "pending",
+        retryAfter,
+      });
+    }
     if (!res.ok) {
       const { msg, code, retryAfter } = await this.readHttpError(res);
       throw new CodeFundiApiError(msg, res.status, { code, retryAfter });
@@ -137,18 +146,20 @@ export class CodeFundiClient {
    */
   private async parseFundiChatResponse(res: Response): Promise<ChatResponse> {
     const ct = (res.headers.get("content-type") || "").toLowerCase();
-    if (ct.includes("application/json")) {
-      return (await res.json()) as ChatResponse;
-    }
     const text = await res.text();
-    return { status: "success", response: text };
+    const parsed = parseFundiChatBody(text, ct);
+    const headerId = res.headers.get("x-conversation-id") || undefined;
+    return {
+      ...parsed,
+      conversation_id: parsed.conversation_id || headerId,
+    };
   }
 
   private buildV1ChatBody(req: ChatRequest): Record<string, unknown> {
     const body: Record<string, unknown> = {
       question: req.prompt,
       model: req.model ?? null,
-      conversation: req.conversation ?? null,
+      conversation: req.conversation ?? randomUUID(),
       context: req.context ?? null,
       embed: req.embed ?? false,
       voice: req.voice ?? false,
@@ -337,9 +348,9 @@ export class CodeFundiClient {
     return this.request<ActivityStatsResponse>(`/v2/stats/activity${buildQuery({ range })}`, { method: "GET" });
   }
 
-  async getLanguageStats(): Promise<LanguageStatsResponse> {
+  async getLanguageStats(source: "indexed" | "queries" = "indexed"): Promise<LanguageStatsResponse> {
     this.requireApiKey();
-    return this.request<LanguageStatsResponse>("/v2/stats/languages", { method: "GET" });
+    return this.request<LanguageStatsResponse>(`/v2/stats/languages${buildQuery({ source })}`, { method: "GET" });
   }
 
   // ==== V2 Keys ====
@@ -374,7 +385,7 @@ export class CodeFundiClient {
   }
 
   async authResend(p: { email: string; type?: "signup" | "email_change" | "email" }): Promise<V2AuthResendResponse> {
-    return this.postUnauth<V2AuthResendResponse>("/v2/auth/resend", { email: p.email, type: p.type ?? "signup" });
+    return this.postUnauth<V2AuthResendResponse>("/v2/auth/resend", { email: p.email, type: p.type ?? "email" });
   }
 
   // ==== V1 Chat (OpenAPI: AI Chat; server body uses `question`, not `prompt`) ====
@@ -384,7 +395,10 @@ export class CodeFundiClient {
     const url = `${this.baseUrl}/v1/fundi/chat`;
     const res = await fetch(url, {
       method: "POST",
-      headers: this.authHeaders(),
+      headers: {
+        ...this.authHeaders(),
+        Accept: "multipart/mixed, text/html, application/json",
+      },
       body: JSON.stringify(this.buildV1ChatBody(req)),
     });
     if (!res.ok) {

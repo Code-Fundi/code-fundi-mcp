@@ -42,7 +42,9 @@ export function registerAuthTools(server: FastMCP): void {
         const d = res.data;
         const parts: string[] = [];
         parts.push("## Authentication Initiated\n");
-        parts.push(`- **User ID:** \`${d.user_id}\``);
+        if (d.user_id) {
+          parts.push(`- **User ID:** \`${d.user_id}\``);
+        }
         parts.push(`- **Email:** ${d.email}`);
         parts.push(`- **Verification required:** ${d.verification_required}`);
 
@@ -113,10 +115,10 @@ export function registerAuthTools(server: FastMCP): void {
     name: "code-fundi-auth-resend",
     description:
       "Resend the OTP email (POST /v2/auth/resend) when the previous code expired or was not received. " +
-      "Use after code-fundi-auth-authenticate, before code-fundi-auth-verify. Default type is signup for new accounts.",
+      "Use after code-fundi-auth-authenticate, before code-fundi-auth-verify. Default type is email (6-digit OTP), not signup.",
     parameters: z.object({
       email: z.string().email().describe("Email address to resend the code to"),
-      type: z.enum(["signup", "email_change", "email"]).optional().describe("Resend type (default: signup)"),
+      type: z.enum(["signup", "email_change", "email"]).optional().describe("Resend type (default: email)"),
     }),
     annotations: { title: "Resend OTP", readOnlyHint: false },
     execute: async (args, { session }) => {

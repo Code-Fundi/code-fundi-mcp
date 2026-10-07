@@ -27,7 +27,7 @@ describe("formatSearchResults", () => {
   it("should format empty results", () => {
     const result = formatSearchResults([], undefined, 0);
     expect(result).toContain("0 found");
-    expect(result).toContain("No results found");
+    expect(result).toContain("search_empty");
   });
 
   it("should format results with similarity scores", () => {
@@ -80,7 +80,7 @@ describe("formatResearchResult", () => {
 
   it("should handle empty research result", () => {
     const result = formatResearchResult({ text: "", searchResults: [] });
-    expect(result).toBe("");
+    expect(result).toContain("search_empty");
   });
 });
 
@@ -181,6 +181,21 @@ describe("formatUsageStats", () => {
     expect(result).toContain("search:semantic");
     expect(result).toContain("250ms");
   });
+
+  it("prints usage_by_category and range_limited meta", () => {
+    const result = formatUsageStats(
+      [{ query_type: "search:semantic", count: 2, cost_credits: 1, avg_duration_ms: 10 }],
+      2,
+      {
+        usage_by_category: [{ category: "search", count: 2, cost_credits: 1 }],
+        range_limited: true,
+        upgrade_message: "Upgrade for more.",
+      },
+    );
+    expect(result).toContain("search");
+    expect(result).toContain("Range limited");
+    expect(result).toContain("Upgrade for more");
+  });
 });
 
 describe("formatLanguageStats", () => {
@@ -215,6 +230,7 @@ describe("formatModels", () => {
       { id: "gpt-4", name: "GPT-4", provider: "openai", tier_required: "PRO" },
     ]);
     expect(result).toContain("GPT-4");
+    expect(result).toContain("gpt-4");
     expect(result).toContain("openai");
     expect(result).toContain("PRO");
   });

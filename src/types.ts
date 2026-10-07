@@ -185,6 +185,7 @@ export interface Repository {
   link: string;
   source: string;
   description?: string | null;
+  ai_overview?: string | null;
   branch?: string;
   is_updating?: boolean;
   status?: boolean;
@@ -761,6 +762,7 @@ export interface ChatResponse extends BaseResponse {
   response?: string;
   model?: string;
   usage?: ChatUsage;
+  conversation_id?: string;
 }
 
 // ============================================================================

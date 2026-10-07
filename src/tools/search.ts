@@ -17,7 +17,7 @@ export function registerSearchTools(server: FastMCP): void {
     description:
       "Search across indexed Code-Fundi repositories using semantic search, grep over docs, or grep over code. " +
       "Returns matching files with similarity scores, paths, and optional documentation. " +
-      "Use scan_mode to choose between semantic (vector), grep_docs (substring on documentation), or grep_code (substring on source code).",
+      "Use scan_mode: semantic (vector), grep_docs (OR of whitespace tokens on documentation; wildcards escaped), or grep_code (contiguous substring on source).",
     parameters: z.object({
       query: z.string().describe("The search query string"),
       scope: z.enum(["all", "repos", "files", "code", "functions"]).optional().describe("Search scope (default: all)"),
@@ -77,7 +77,7 @@ export function registerSearchTools(server: FastMCP): void {
       query: z.string().describe("The research query"),
       scope: z.enum(["all", "repos", "files", "code", "functions"]).optional().describe("Search scope"),
       scan_mode: z.enum(["semantic", "grep_docs", "grep_code"]).optional().describe("Search mode"),
-      model: z.string().optional().describe("AI model to use for analysis"),
+      model: z.string().optional().describe("Catalog model id from code-fundi-list-models, not a display name"),
       repo_ids: z.array(z.string()).optional().describe("Filter by repository UUIDs"),
       repo_urls: z.array(z.string()).optional().describe("Filter by repository clone URLs"),
       fields: z.enum(["basic", "summary", "full"]).optional().describe("Documentation detail level"),

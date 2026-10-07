@@ -20,7 +20,13 @@ export function registerStatsTools(server: FastMCP): void {
       try {
         const client = getClient(clientFromToolSession(session));
         const res = await client.getUsageStats(args.range);
-        if (res.data) return formatUsageStats(res.data.usage_by_type, res.data.total_queries);
+        if (res.data) {
+          return formatUsageStats(res.data.usage_by_type, res.data.total_queries, {
+            usage_by_category: res.data.usage_by_category,
+            range_limited: res.meta?.range_limited,
+            upgrade_message: res.meta?.upgrade_message,
+          });
+        }
         return "No usage data available.";
       } catch (err) { return formatError(err); }
     },

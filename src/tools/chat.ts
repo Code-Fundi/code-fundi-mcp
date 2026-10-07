@@ -17,11 +17,11 @@ export function registerChatTools(server: FastMCP): void {
     name: "code-fundi-chat",
     description:
       "Send a message to Code-Fundi AI (Fundi chat: POST /v1/fundi/chat). " +
-      "Supports threading, optional code context, indexed repository knowledge (`knowledge_id`), embeddings memory, and voice mode. " +
-      "Responses are streamed by the API and returned as plain text (or JSON when the server uses JSON mode).",
+      "Pass `model` as the catalog `id` from code-fundi-list-models (not a display name). " +
+      "Supports threading via conversation_id, optional code context, indexed repository knowledge (`knowledge_id`), embeddings memory, and voice mode.",
     parameters: z.object({
       prompt: z.string().describe("User message (sent to the API as `question`)"),
-      model: z.string().optional().describe("AI model ID to use"),
+      model: z.string().optional().describe("Catalog model id from code-fundi-list-models (not display name)"),
       conversation: z.string().optional().describe("Conversation ID for threading (continues a previous conversation)"),
       code_block: z.string().optional().describe("Optional code snippet combined with the question for code-aware answers"),
       knowledge_id: z.array(z.string()).optional().describe(
@@ -52,6 +52,7 @@ export function registerChatTools(server: FastMCP): void {
         if (res.response) parts.push(res.response);
         else parts.push("_No response generated._");
         if (res.model) parts.push(`\n_Model: ${res.model}_`);
+        if (res.conversation_id) parts.push(`\n**conversation_id:** \`${res.conversation_id}\``);
         if (res.usage) {
           const tokens = [
             res.usage.prompt_tokens && `prompt: ${res.usage.prompt_tokens}`,
@@ -67,7 +68,7 @@ export function registerChatTools(server: FastMCP): void {
   server.addTool({
     name: "code-fundi-list-models",
     description:
-      "List the curated Code-Fundi chat model catalog (GET /v2/models) with providers, required tier, and context length.",
+      "List the curated Code-Fundi chat model catalog (GET /v2/models). Use the `id` column when calling chat or research — never the display name.",
     parameters: z.object({}),
     annotations: { title: "List AI Models", readOnlyHint: true },
     execute: async (_args, { session }) => {
