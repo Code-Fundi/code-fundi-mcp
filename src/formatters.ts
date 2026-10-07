@@ -50,7 +50,7 @@ export function formatSearchResults(results: SearchResult[], meta?: SearchMeta, 
   }
 
   if (results.length === 0) {
-    parts.push("No results found.");
+    parts.push("search_empty: no matching files.");
     return parts.join("\n");
   }
 
@@ -86,6 +86,10 @@ export function formatResearchResult(result: ResearchResult): string {
     parts.push("## AI Analysis\n");
     parts.push(result.text);
     parts.push("");
+  }
+
+  if (!result.text && result.searchResults.length === 0) {
+    parts.push("search_empty: no matching files and no AI analysis.");
   }
 
   if (result.model) parts.push(`_Model: ${result.model}_`);
@@ -423,9 +427,29 @@ export function formatConversation(conversationId: string, messages: HistoryItem
 // Stats
 // ============================================================================
 
-export function formatUsageStats(usage: UsageByType[], total: number): string {
+export function formatUsageStats(
+  usage: UsageByType[],
+  total: number,
+  extra?: {
+    usage_by_category?: Array<{ category: string; count: number; cost_credits?: number }>;
+    range_limited?: boolean;
+    upgrade_message?: string;
+  },
+): string {
   const parts: string[] = [];
   parts.push(`## Usage Statistics (${total} total queries)\n`);
+  if (extra?.range_limited) {
+    parts.push(`_Range limited._ ${extra.upgrade_message || ""}`.trim());
+    parts.push("");
+  }
+  if (extra?.usage_by_category?.length) {
+    parts.push("| Category | Count | Credits |");
+    parts.push("|----------|-------|---------|");
+    for (const c of extra.usage_by_category) {
+      parts.push(`| ${c.category} | ${c.count} | ${c.cost_credits ?? 0} |`);
+    }
+    parts.push("");
+  }
   parts.push("| Type | Count | Credits | Avg Duration |");
   parts.push("|------|-------|---------|-------------|");
   for (const u of usage) {
@@ -473,14 +497,14 @@ export function formatApiKeys(keys: ApiKey[]): string {
 export function formatModels(models: AIModel[]): string {
   const parts: string[] = [];
   parts.push(`## Available Models (${models.length})\n`);
-  parts.push("| Name | Provider | Tier | Context |");
-  parts.push("|------|----------|------|---------|");
+  parts.push("| ID | Name | Provider | Tier | Context |");
+  parts.push("|----|------|----------|------|---------|");
   for (const m of models) {
     const tier =
       m.tier_required
       ?? (m.tier_requirements?.premium_only ? "PRO" as TierName : "FREE" as TierName);
     const ctx = m.context_length != null ? m.context_length.toLocaleString() : "—";
-    parts.push(`| ${m.name} | ${m.provider} | ${tier} | ${ctx} |`);
+    parts.push(`| \`${m.id}\` | ${m.name} | ${m.provider} | ${tier} | ${ctx} |`);
   }
   return parts.join("\n");
 }
@@ -531,6 +555,9 @@ export function formatModelLimits(data: ModelLimitsData): string {
 export function formatError(err: unknown): string {
   if (err instanceof CodeFundiApiError) {
     let msg = `**Code-Fundi API Error (${err.statusCode}):** ${err.message}`;
+    if (err.statusCode === 202 || err.code === "pending") {
+      msg = `**Pending (HTTP 202):** ${err.message || "Job is not finished yet. Poll repo-status or retry."}`;
+    }
     if (err.statusCode === 401) {
       msg += "\n\n_Tip: Use `code-fundi-auth-authenticate` and `code-fundi-auth-verify` to sign in, or set the CODEFUNDI_API_KEY environment variable. After auth, persist the key in MCP config so future sessions stay signed in._";
     }

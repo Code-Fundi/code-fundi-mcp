@@ -5,6 +5,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatHistoryList, formatHistoryDetail, formatConversation, formatError } from "../formatters.js";
 
 export function registerHistoryTools(server: FastMCP): void {
@@ -25,9 +26,9 @@ export function registerHistoryTools(server: FastMCP): void {
       categories: z.array(z.enum(["chat", "search", "research", "files", "index", "repos", "history", "stats", "keys", "models", "other"])).optional().describe("Filter by categories"),
     }),
     annotations: { title: "List History", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.listHistory(args);
         return formatHistoryList(res.data || [], res.pagination);
       } catch (err) { return formatError(err); }
@@ -41,9 +42,9 @@ export function registerHistoryTools(server: FastMCP): void {
       history_id: z.string().describe("History entry UUID"),
     }),
     annotations: { title: "History Item Detail", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getHistoryItem(args.history_id);
         return res.data ? formatHistoryDetail(res.data) : "History item not found.";
       } catch (err) { return formatError(err); }
@@ -57,9 +58,9 @@ export function registerHistoryTools(server: FastMCP): void {
       conversation_id: z.string().describe("Conversation thread UUID"),
     }),
     annotations: { title: "Conversation Thread", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getConversation(args.conversation_id);
         if (res.data) {
           return formatConversation(res.data.conversation_id, res.data.messages, res.data.message_count);

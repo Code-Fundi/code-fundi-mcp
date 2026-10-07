@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { CodeFundiClient, CodeFundiApiError } from "../src/client.js";
+import { parseFundiChatBody } from "../src/chatParse.js";
 
 describe("CodeFundiClient", () => {
   let client: CodeFundiClient;
@@ -458,6 +459,31 @@ describe("CodeFundiClient", () => {
 });
 
 // ==== CodeFundiApiError ====
+
+describe("parseFundiChatBody multipart", () => {
+  it("strips boundaries and keeps HTML plus conversation_id", () => {
+    const body = [
+      `--code-fundi-res-split`,
+      `Content-Type: application/json`,
+      ``,
+      `{"conversation_id":"conv-1"}`,
+      `--code-fundi-res-split`,
+      `Content-Type: text/html`,
+      ``,
+      `<p>Hello</p>`,
+      `--code-fundi-res-split`,
+      `Content-Type: text/html`,
+      ``,
+      ` world`,
+      `--code-fundi-res-split--`,
+    ].join("\r\n");
+    const parsed = parseFundiChatBody(body, "multipart/mixed; boundary=code-fundi-res-split");
+    expect(parsed.response).toContain("Hello");
+    expect(parsed.response).toContain("world");
+    expect(parsed.response).not.toContain("code-fundi-res-split");
+    expect(parsed.conversation_id).toBe("conv-1");
+  });
+});
 
 describe("CodeFundiApiError", () => {
   it("should store statusCode and message", () => {

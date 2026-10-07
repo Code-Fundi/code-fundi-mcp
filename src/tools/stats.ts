@@ -5,6 +5,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatUsageStats, formatActivityStats, formatLanguageStats, formatError } from "../formatters.js";
 
 export function registerStatsTools(server: FastMCP): void {
@@ -15,11 +16,17 @@ export function registerStatsTools(server: FastMCP): void {
       range: z.enum(["7d", "30d", "90d"]).optional().describe("Time range per OpenAPI (default: 7d)"),
     }),
     annotations: { title: "Usage Statistics", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getUsageStats(args.range);
-        if (res.data) return formatUsageStats(res.data.usage_by_type, res.data.total_queries);
+        if (res.data) {
+          return formatUsageStats(res.data.usage_by_type, res.data.total_queries, {
+            usage_by_category: res.data.usage_by_category,
+            range_limited: res.meta?.range_limited,
+            upgrade_message: res.meta?.upgrade_message,
+          });
+        }
         return "No usage data available.";
       } catch (err) { return formatError(err); }
     },
@@ -32,9 +39,9 @@ export function registerStatsTools(server: FastMCP): void {
       range: z.enum(["7d", "30d", "90d"]).optional().describe("Time range per OpenAPI (default: 7d)"),
     }),
     annotations: { title: "Activity Statistics", readOnlyHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getActivityStats(args.range);
         if (res.data) return formatActivityStats(res.data.activity_by_day, res.data.total_queries, res.data.active_days);
         return "No activity data available.";
@@ -47,9 +54,9 @@ export function registerStatsTools(server: FastMCP): void {
     description: "Get programming language usage statistics across all indexed repositories.",
     parameters: z.object({}),
     annotations: { title: "Language Statistics", readOnlyHint: true },
-    execute: async () => {
+    execute: async (_args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const res = await client.getLanguageStats();
         if (res.data) return formatLanguageStats(res.data.languages, res.data.total_queries);
         return "No language data available.";

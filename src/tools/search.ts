@@ -8,6 +8,7 @@
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { clientFromToolSession } from "../sessionClient.js";
 import { formatSearchResults, formatResearchResult, formatError } from "../formatters.js";
 
 export function registerSearchTools(server: FastMCP): void {
@@ -16,7 +17,7 @@ export function registerSearchTools(server: FastMCP): void {
     description:
       "Search across indexed Code-Fundi repositories using semantic search, grep over docs, or grep over code. " +
       "Returns matching files with similarity scores, paths, and optional documentation. " +
-      "Use scan_mode to choose between semantic (vector), grep_docs (substring on documentation), or grep_code (substring on source code).",
+      "Use scan_mode: semantic (vector), grep_docs (OR of whitespace tokens on documentation; wildcards escaped), or grep_code (contiguous substring on source).",
     parameters: z.object({
       query: z.string().describe("The search query string"),
       scope: z.enum(["all", "repos", "files", "code", "functions"]).optional().describe("Search scope (default: all)"),
@@ -37,9 +38,9 @@ export function registerSearchTools(server: FastMCP): void {
       visibility: z.enum(["private", "public", "all"]).optional().describe("Repository visibility filter"),
     }),
     annotations: { title: "Code-Fundi Search", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const response = await client.search({
           query: args.query,
           scope: args.scope,
@@ -76,7 +77,7 @@ export function registerSearchTools(server: FastMCP): void {
       query: z.string().describe("The research query"),
       scope: z.enum(["all", "repos", "files", "code", "functions"]).optional().describe("Search scope"),
       scan_mode: z.enum(["semantic", "grep_docs", "grep_code"]).optional().describe("Search mode"),
-      model: z.string().optional().describe("AI model to use for analysis"),
+      model: z.string().optional().describe("Catalog model id from code-fundi-list-models, not a display name"),
       repo_ids: z.array(z.string()).optional().describe("Filter by repository UUIDs"),
       repo_urls: z.array(z.string()).optional().describe("Filter by repository clone URLs"),
       fields: z.enum(["basic", "summary", "full"]).optional().describe("Documentation detail level"),
@@ -91,9 +92,9 @@ export function registerSearchTools(server: FastMCP): void {
       similarity_threshold: z.number().min(0).max(1).optional(),
     }),
     annotations: { title: "Code-Fundi Research", readOnlyHint: true, openWorldHint: true },
-    execute: async (args) => {
+    execute: async (args, { session }) => {
       try {
-        const client = getClient();
+        const client = getClient(clientFromToolSession(session));
         const result = await client.searchWithChat({
           query: args.query,
           scope: args.scope,

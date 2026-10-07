@@ -117,6 +117,40 @@ Every tool below is backed by the same codebase map: structural dependencies, ca
 
 ## Quick Start
 
+### Local stdio (default — Cursor / Claude Desktop)
+
+Local install is unchanged: `npx` + `CODEFUNDI_API_KEY`. No OAuth.
+
+```json
+{
+  "mcpServers": {
+    "code-fundi": {
+      "command": "npx",
+      "args": ["-y", "@codefundi/code-fundi-mcp"],
+      "env": {
+        "CODEFUNDI_API_KEY": "your_api_key_here",
+        "CODEFUNDI_BASE_URL": "https://api.codefundi.app"
+      }
+    }
+  }
+}
+```
+
+### Remote MCP (OAuth or API key header)
+
+Public MCP URL: **`https://api.codefundi.app/mcp`**
+
+- **Claude / ChatGPT:** Authentication = OAuth. Issuer = `https://api.codefundi.app`. Host callback is Claude’s `https://claude.ai/api/mcp/auth_callback` (exact). Consent happens on `https://codefundi.app/oauth/consent` — **never** paste the dashboard as the authorize URL, and never use `{mcp}/authorize`.
+- **Cursor remote:** same MCP URL with `headers: { "X-API-Key": "…" }` **or** OAuth.
+
+Self-host the package as Streamable HTTP (optional; fundiAI Cloud Run also mounts `/mcp`):
+
+```bash
+CODEFUNDI_MCP_TRANSPORT=httpStream PORT=8080 FUNDI_AI_PUBLIC_URL=https://api.codefundi.app npx -y @codefundi/code-fundi-mcp
+```
+
+Under `httpStream`, each request gets a **per-session** API client (Bearer → `/oauth/resolve` or `X-API-Key`). The process-wide `getClient()` singleton is not used for tool execution.
+
 ### Install from npm (recommended)
 
 Install the package (includes a pre-built `dist/`). The `code-fundi-mcp` binary is on your `PATH` when installed globally, or available via `npx` without cloning the repo:
