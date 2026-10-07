@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.FelixWaweru/code-fundi-mcp",
+  "description": "CodeFundi MCP server for codebase mapping and blast-radius analysis.",
+  "repository": {
+    "url": "https://github.com/Code-Fundi/code-fundi-mcp",
+    "source": "github"
+  },
+  "version": "0.1.4",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@codefundi/code-fundi-mcp",
+      "version": "0.1.4",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
